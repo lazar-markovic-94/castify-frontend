@@ -1,0 +1,45 @@
+export enum UserRole {
+  TALENT = 'TALENT',
+  CLIENT = 'CLIENT',
+  ADMIN = 'ADMIN',
+}
+
+export enum LocationMode {
+  REMOTE = 'REMOTE',
+  SPECIFIC = 'SPECIFIC',
+  HYBRID = 'HYBRID',
+}
+
+export enum VerificationStatus {
+  PENDING = 'PENDING',
+  VERIFIED = 'VERIFIED',
+  REJECTED = 'REJECTED',
+}
+
+export enum OrgType {
+  PRODUCTION_COMPANY = 'PRODUCTION_COMPANY',
+  AGENCY = 'AGENCY',
+  BRAND = 'BRAND',
+  INDIVIDUAL = 'INDIVIDUAL',
+}
+
+export enum MediaType {
+  IMAGE = 'IMAGE',
+  VIDEO = 'VIDEO',
+  AUDIO = 'AUDIO',
+}
+
+export enum ContentType {
+  HEADSHOT = 'HEADSHOT',
+  PORTFOLIO_ITEM = 'PORTFOLIO_ITEM',
+  DEMO_REEL = 'DEMO_REEL',
+  VOICE_SAMPLE = 'VOICE_SAMPLE',
+  OTHER = 'OTHER',
+}
+
+export enum TalentTier {
+  BRONZE = 'BRONZE',
+  SILVER = 'SILVER',
+  GOLD = 'GOLD',
+  PREMIUM = 'PREMIUM',
+}
