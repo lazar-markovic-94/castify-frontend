@@ -1,4 +1,4 @@
-import { UserRole, LocationMode, VerificationStatus, OrgType, MediaType, ContentType, TalentTier } from './enums';
+import { UserRole, LocationMode, VerificationStatus, OrgType, MediaType, ContentType, TalentTier, CollaborationStatus } from './enums';
 
 // Auth Entities
 export interface User {
@@ -106,6 +106,15 @@ export interface PortfolioItem {
   addedAt: string;
 }
 
+// Portfolio Item with Media (for displaying portfolio)
+export interface PortfolioItemWithMedia {
+  portfolioItemId: string;
+  talentProfileId: string;
+  mediaAsset: MediaAsset;
+  displayOrder: number;
+  addedAt: string;
+}
+
 // Conversation
 export interface Conversation {
   conversationId: string;
@@ -124,4 +133,86 @@ export interface Message {
   sentAt: string;
   isRead: boolean;
   readAt: string | null;
+}
+
+// Rating
+export interface TalentRating {
+  ratingId: string;
+  talentProfileId: string;
+  clientUserId: string;
+  collaborationId: string | null;
+  overallRating: number;
+  professionalismRating: number;
+  qualityRating: number;
+  communicationRating: number;
+  timelinessRating: number;
+  averageRating: number;
+  reviewText: string | null;
+  wouldWorkAgain: boolean;
+  createdAt: string;
+  isVerified: boolean;
+}
+
+// Statistics
+export interface TalentStatistics {
+  talentProfileId: string;
+  averageRating: number;
+  totalRatings: number;
+  ratingBreakdown: RatingBreakdown;
+  collaborationMetrics: CollaborationMetrics;
+  financialMetrics: FinancialMetrics;
+  engagementMetrics: EngagementMetrics;
+  tier: TalentTier;
+  lastUpdated: string;
+}
+
+export interface RatingBreakdown {
+  averageProfessionalism: number;
+  averageQuality: number;
+  averageCommunication: number;
+  averageTimeliness: number;
+}
+
+export interface CollaborationMetrics {
+  totalCollaborations: number;
+  completedCollaborations: number;
+  canceledCollaborations: number;
+  successRate: number;
+  wouldWorkAgainPercentage: number;
+}
+
+export interface FinancialMetrics {
+  totalEarnings: number;
+}
+
+export interface EngagementMetrics {
+  averageResponseTimeHours: number | null;
+  profileCompleteness: number;
+}
+
+// Leaderboard
+export interface LeaderboardEntry {
+  talentProfileId: string;
+  averageRating: number;
+  completedCollaborations: number;
+  tier: TalentTier;
+}
+
+// Collaboration
+export interface Collaboration {
+  collaborationId: string;
+  clientUserId: string;
+  talentProfileId: string;
+  title: string;
+  description: string;
+  budget: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: CollaborationStatus;
+  proposedAt: string;
+  respondedAt: string | null;
+  completedAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

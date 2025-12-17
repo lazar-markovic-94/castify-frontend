@@ -126,3 +126,51 @@ export interface CreateConversationRequest {
 export interface SendMessageRequest {
   content: string;
 }
+
+// Rating DTOs
+export interface CreateRatingRequest {
+  talentProfileId: string;
+  collaborationId?: string | null;
+  overallRating: number;
+  professionalismRating: number;
+  qualityRating: number;
+  communicationRating: number;
+  timelinessRating: number;
+  reviewText?: string | null;
+  wouldWorkAgain: boolean;
+}
+
+export interface GetRatingsRequest {
+  talentProfileId: string;
+  page?: number;
+  size?: number;
+}
+
+export interface RatingsPageResponse {
+  ratings: import('./entities').TalentRating[];
+  totalRatings: number;
+  page: number;
+  size: number;
+  totalPages: number;
+}
+
+export interface LeaderboardResponse {
+  topRated: import('./entities').LeaderboardEntry[];
+  mostSuccessful: import('./entities').LeaderboardEntry[];
+}
+
+// Collaboration DTOs
+export interface CreateCollaborationRequest {
+  talentProfileId: string;
+  title: string;
+  description: string;
+  budget?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  notes?: string | null;
+}
+
+export interface CollaborationsResponse {
+  collaborations: import('./entities').Collaboration[];
+  total: number;
+}

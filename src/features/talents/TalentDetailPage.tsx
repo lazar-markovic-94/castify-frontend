@@ -1,10 +1,28 @@
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTalentProfile } from '../../core/application/useTalents';
 import { useCreateConversation } from '../../core/application/useMessaging';
 import { useCurrentUser } from '../../core/application/useAuth';
+import { usePortfolioItems } from '../../core/application/useMedia';
+import {
+  useTalentRatings,
+  useTalentStatistics,
+  useCreateRating,
+} from '../../core/application/useRatings';
+import { useCreateCollaboration } from '../../core/application/useCollaborations';
 import { MainLayout } from '../../app/layouts/MainLayout';
 import { Button } from '../../shared/components/ui/Button';
+import { useToast } from '../../shared/contexts/ToastContext';
 import { Card, CardContent } from '../../shared/components/ui/Card';
+import { PortfolioGallery } from '../../shared/components/ui/PortfolioGallery';
+import { MediaViewer } from '../../shared/components/ui/MediaViewer';
+import { ReviewForm } from '../../shared/components/ui/ReviewForm';
+import { ReviewList } from '../../shared/components/ui/ReviewList';
+import { RatingBreakdown } from '../../shared/components/ui/RatingBreakdown';
+import { CollaborationRequestModal } from '../../shared/components/ui/CollaborationRequestModal';
+import { PortfolioItemWithMedia } from '../../core/domain/entities';
+import { CreateRatingRequest, CreateCollaborationRequest } from '../../core/domain/dtos';
+import { UserRole } from '../../core/domain/enums';
 
 export const TalentDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +30,31 @@ export const TalentDetailPage = () => {
   const { data: talent, isLoading, error } = useTalentProfile(id);
   const { data: currentUser } = useCurrentUser();
   const createConversation = useCreateConversation();
+  const { showSuccess, showError } = useToast();
+
+  // Portfolio state and hooks
+  const { data: portfolioItems = [], isLoading: isLoadingPortfolio } = usePortfolioItems(id);
+  const [selectedMediaItem, setSelectedMediaItem] = useState<PortfolioItemWithMedia | null>(null);
+
+  // Rating state and hooks
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [currentReviewPage, setCurrentReviewPage] = useState(0);
+
+  // Collaboration state
+  const [showCollaborationModal, setShowCollaborationModal] = useState(false);
+  const {
+    data: ratingsData,
+    isLoading: isLoadingRatings,
+  } = useTalentRatings({
+    talentProfileId: id!,
+    page: currentReviewPage,
+    size: 10,
+  });
+  const { data: statistics, isLoading: isLoadingStatistics } = useTalentStatistics(id);
+  const createRating = useCreateRating();
+  const createCollaboration = useCreateCollaboration();
+
+  const isClient = currentUser?.role === UserRole.CLIENT;
 
   if (isLoading) {
     return (
@@ -49,6 +92,57 @@ export const TalentDetailPage = () => {
     );
   };
 
+  const handleMediaItemClick = (item: PortfolioItemWithMedia) => {
+    setSelectedMediaItem(item);
+  };
+
+  const handleNextMedia = () => {
+    if (!selectedMediaItem) return;
+    const currentIndex = portfolioItems.findIndex(
+      (item) => item.portfolioItemId === selectedMediaItem.portfolioItemId
+    );
+    if (currentIndex < portfolioItems.length - 1) {
+      setSelectedMediaItem(portfolioItems[currentIndex + 1]);
+    }
+  };
+
+  const handlePreviousMedia = () => {
+    if (!selectedMediaItem) return;
+    const currentIndex = portfolioItems.findIndex(
+      (item) => item.portfolioItemId === selectedMediaItem.portfolioItemId
+    );
+    if (currentIndex > 0) {
+      setSelectedMediaItem(portfolioItems[currentIndex - 1]);
+    }
+  };
+
+  const handleReviewSubmit = async (reviewData: CreateRatingRequest) => {
+    try {
+      await createRating.mutateAsync(reviewData);
+      setShowReviewForm(false);
+      showSuccess('Review submitted successfully!');
+    } catch (error: any) {
+      console.error('Error submitting review:', error);
+      showError(`Failed to submit review: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentReviewPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCollaborationSubmit = async (requestData: CreateCollaborationRequest) => {
+    try {
+      await createCollaboration.mutateAsync(requestData);
+      setShowCollaborationModal(false);
+      showSuccess('Collaboration request sent successfully! The talent will be notified.');
+    } catch (error: any) {
+      console.error('Error sending collaboration request:', error);
+      showError(`Failed to send collaboration request: ${error.message || 'Unknown error'}`);
+    }
+  };
+
   const capabilities = [
     talent.capabilities.canDoActing && 'Acting',
     talent.capabilities.canDoVoiceover && 'Voiceover',
@@ -60,12 +154,18 @@ export const TalentDetailPage = () => {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Back Button */}
         <div className="flex items-center justify-between">
           <Link to="/talents">
             <Button variant="outline">← Back to Talents</Button>
           </Link>
         </div>
+
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content - Left Column */}
+          <div className="lg:col-span-2 space-y-6">
 
         <Card>
           <CardContent className="p-8">
@@ -209,36 +309,171 @@ export const TalentDetailPage = () => {
                   </div>
                 )}
 
-                <div className="mt-8">
-                  <Button
-                    size="lg"
-                    onClick={handleStartConversation}
-                    disabled={createConversation.isPending}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg"
-                  >
-                    {createConversation.isPending ? (
-                      <span className="flex items-center gap-2">
-                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Starting conversation...
-                      </span>
-                    ) : (
+                {isClient && (
+                  <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                    <Button
+                      size="lg"
+                      onClick={() => setShowCollaborationModal(true)}
+                      className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold shadow-lg"
+                    >
                       <span className="flex items-center gap-2">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
-                        Contact Talent
+                        Request Collaboration
                       </span>
-                    )}
-                  </Button>
-                </div>
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={handleStartConversation}
+                      disabled={createConversation.isPending}
+                      className="border-2"
+                    >
+                      {createConversation.isPending ? (
+                        <span className="flex items-center gap-2">
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Starting conversation...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          Contact Talent
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
+
+            {/* Portfolio Section */}
+            {portfolioItems.length > 0 && (
+              <Card>
+                <CardContent className="p-8">
+                  <h2 className="text-2xl font-bold mb-6">Portfolio</h2>
+                  {isLoadingPortfolio ? (
+                    <div className="text-center py-12">
+                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                      <p className="text-muted-foreground mt-4">Loading portfolio...</p>
+                    </div>
+                  ) : (
+                    <PortfolioGallery
+                      items={portfolioItems}
+                      onItemClick={handleMediaItemClick}
+                      isOwner={false}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Review Form Section - CLIENT only */}
+            {isClient && !showReviewForm && (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <h3 className="text-xl font-bold mb-2">Have you worked with {talent.fullName}?</h3>
+                  <p className="text-gray-600 mb-4">Share your experience to help other clients</p>
+                  <Button
+                    onClick={() => setShowReviewForm(true)}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  >
+                    Write a Review
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Review Form */}
+            {showReviewForm && (
+              <ReviewForm
+                talentProfileId={talent.talentProfileId}
+                talentName={talent.fullName}
+                onSubmit={handleReviewSubmit}
+                onCancel={() => setShowReviewForm(false)}
+                isSubmitting={createRating.isPending}
+              />
+            )}
+
+            {/* Reviews Section */}
+            {ratingsData && ratingsData.ratings.length > 0 && (
+              <Card>
+                <CardContent className="p-8">
+                  <h2 className="text-2xl font-bold mb-6">
+                    Reviews ({ratingsData.totalRatings})
+                  </h2>
+                  <ReviewList
+                    reviews={ratingsData.ratings}
+                    totalReviews={ratingsData.totalRatings}
+                    currentPage={ratingsData.page}
+                    totalPages={ratingsData.totalPages}
+                    onPageChange={handlePageChange}
+                    isLoading={isLoadingRatings}
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Sidebar - Right Column */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Rating Breakdown */}
+            {statistics && !isLoadingStatistics && (
+              <RatingBreakdown statistics={statistics} />
+            )}
+
+            {isLoadingStatistics && (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                  <p className="text-gray-600 mt-4">Loading stats...</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Media Viewer Modal */}
+      <MediaViewer
+        item={selectedMediaItem}
+        onClose={() => setSelectedMediaItem(null)}
+        onNext={handleNextMedia}
+        onPrevious={handlePreviousMedia}
+        hasNext={
+          selectedMediaItem
+            ? portfolioItems.findIndex(
+                (item) => item.portfolioItemId === selectedMediaItem.portfolioItemId
+              ) <
+              portfolioItems.length - 1
+            : false
+        }
+        hasPrevious={
+          selectedMediaItem
+            ? portfolioItems.findIndex(
+                (item) => item.portfolioItemId === selectedMediaItem.portfolioItemId
+              ) > 0
+            : false
+        }
+      />
+
+      {/* Collaboration Request Modal */}
+      {showCollaborationModal && talent && (
+        <CollaborationRequestModal
+          talentProfileId={talent.talentProfileId}
+          talentName={talent.fullName}
+          onSubmit={handleCollaborationSubmit}
+          onClose={() => setShowCollaborationModal(false)}
+          isSubmitting={createCollaboration.isPending}
+        />
+      )}
     </MainLayout>
   );
 };

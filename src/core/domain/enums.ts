@@ -43,3 +43,12 @@ export enum TalentTier {
   GOLD = 'GOLD',
   PREMIUM = 'PREMIUM',
 }
+
+export enum CollaborationStatus {
+  PROPOSED = 'PROPOSED',
+  ACCEPTED = 'ACCEPTED',
+  DECLINED = 'DECLINED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  CANCELED = 'CANCELED',
+}

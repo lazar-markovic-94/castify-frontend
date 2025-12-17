@@ -3,11 +3,15 @@ import { AuthGuard } from './guards/AuthGuard';
 import { RoleGuard } from './guards/RoleGuard';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
+import { LandingPage } from '../features/landing/LandingPage';
 import { TalentsListPage } from '../features/talents/TalentsListPage';
 import { TalentDetailPage } from '../features/talents/TalentDetailPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { ClientOrgPage } from '../features/clientOrg/ClientOrgPage';
 import { MessagesPage } from '../features/messaging/MessagesPage';
+import { MyProjectsPage } from '../features/collaborations/MyProjectsPage';
+import { MyOpportunitiesPage } from '../features/collaborations/MyOpportunitiesPage';
+import { CollaborationDetailPage } from '../features/collaborations/CollaborationDetailPage';
 import { UserRole } from '../core/domain/enums';
 import { useCurrentUser } from '../core/application/useAuth';
 
@@ -25,13 +29,19 @@ const HomePage = () => {
     );
   }
 
-  // Redirect based on user role
-  if (user?.role === UserRole.CLIENT) {
+  // Show landing page for unauthenticated users
+  if (!user) {
+    return <LandingPage />;
+  }
+
+  // Redirect authenticated users based on role
+  if (user.role === UserRole.CLIENT) {
     return <Navigate to="/talents" replace />;
   }
-  if (user?.role === UserRole.TALENT) {
+  if (user.role === UserRole.TALENT) {
     return <Navigate to="/profile" replace />;
   }
+
   return <Navigate to="/login" replace />;
 };
 
@@ -42,14 +52,8 @@ export const AppRouter = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        <Route
-          path="/"
-          element={
-            <AuthGuard>
-              <HomePage />
-            </AuthGuard>
-          }
-        />
+        {/* Home page - shows landing page for guests, redirects authenticated users */}
+        <Route path="/" element={<HomePage />} />
 
         {/* Client-only routes */}
         <Route
@@ -85,7 +89,28 @@ export const AppRouter = () => {
           }
         />
 
+        <Route
+          path="/projects"
+          element={
+            <AuthGuard>
+              <RoleGuard allowedRoles={[UserRole.CLIENT]}>
+                <MyProjectsPage />
+              </RoleGuard>
+            </AuthGuard>
+          }
+        />
+
         {/* Talent-only routes */}
+        <Route
+          path="/opportunities"
+          element={
+            <AuthGuard>
+              <RoleGuard allowedRoles={[UserRole.TALENT]}>
+                <MyOpportunitiesPage />
+              </RoleGuard>
+            </AuthGuard>
+          }
+        />
         <Route
           path="/profile"
           element={
@@ -103,6 +128,15 @@ export const AppRouter = () => {
           element={
             <AuthGuard>
               <MessagesPage />
+            </AuthGuard>
+          }
+        />
+
+        <Route
+          path="/collaborations/:id"
+          element={
+            <AuthGuard>
+              <CollaborationDetailPage />
             </AuthGuard>
           }
         />

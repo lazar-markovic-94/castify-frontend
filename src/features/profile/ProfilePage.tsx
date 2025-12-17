@@ -4,30 +4,57 @@ import {
   useCreateTalentProfile,
   useUpdateTalentLocation,
   useUpdateTalentLanguages,
+  useUpdateTalentTags,
   useUpdateTalentCapabilities,
   useUpdateTalentSocialLinks,
   useUpdateProfileImage,
 } from '../../core/application/useTalents';
 import { useUploadImage } from '../../core/application/useUpload';
+import {
+  usePortfolioItems,
+  useUploadAndAddToPortfolio,
+  useRemoveFromPortfolio,
+} from '../../core/application/useMedia';
+import { useTalentStatistics } from '../../core/application/useRatings';
 import { MainLayout } from '../../app/layouts/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shared/components/ui/Card';
 import { Button } from '../../shared/components/ui/Button';
 import { Input } from '../../shared/components/ui/Input';
+import { MediaUpload, MediaUploadMetadata } from '../../shared/components/ui/MediaUpload';
+import { PortfolioGallery } from '../../shared/components/ui/PortfolioGallery';
+import { MediaViewer } from '../../shared/components/ui/MediaViewer';
+import { PortfolioItemWithMedia } from '../../core/domain/entities';
 import { useForm } from 'react-hook-form';
 import { LocationMode } from '../../core/domain/enums';
 import {
   CreateTalentProfileRequest,
   UpdateLocationRequest,
-  UpdateLanguagesRequest,
   UpdateCapabilitiesRequest,
-  UpdateSocialLinksRequest,
 } from '../../core/domain/dtos';
+
+// Form types that match the HTML form structure
+interface LanguagesFormData {
+  languages: string; // Comma-separated string in the form
+}
+
+interface TagsFormData {
+  tags: string; // Comma-separated string in the form
+}
+
+interface SocialLinksFormData {
+  instagramUrl: string;
+  twitterUrl: string;
+  linkedinUrl: string;
+  websiteUrl: string;
+}
 
 export const ProfilePage = () => {
   const { data: profile, isLoading, error } = useMyTalentProfile();
+  const { data: statistics } = useTalentStatistics(profile?.talentProfileId);
   const createProfile = useCreateTalentProfile();
   const updateLocation = useUpdateTalentLocation();
   const updateLanguages = useUpdateTalentLanguages();
+  const updateTags = useUpdateTalentTags();
   const updateCapabilities = useUpdateTalentCapabilities();
   const updateSocialLinks = useUpdateTalentSocialLinks();
   const updateProfileImage = useUpdateProfileImage();
@@ -36,6 +63,15 @@ export const ProfilePage = () => {
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Portfolio state and hooks
+  const { data: portfolioItems = [], isLoading: isLoadingPortfolio } = usePortfolioItems(
+    profile?.talentProfileId
+  );
+  const uploadAndAddToPortfolio = useUploadAndAddToPortfolio();
+  const removeFromPortfolio = useRemoveFromPortfolio();
+  const [selectedMediaItem, setSelectedMediaItem] = useState<PortfolioItemWithMedia | null>(null);
+  const [showMediaUpload, setShowMediaUpload] = useState(false);
 
   const { register: registerCreate, handleSubmit: handleSubmitCreate, setValue: setCreateValue } = useForm<CreateTalentProfileRequest>({
     defaultValues: {
@@ -137,9 +173,10 @@ export const ProfilePage = () => {
 
   const { register: registerLocation, handleSubmit: handleSubmitLocation, reset: resetLocation, setValue: setLocationValue } = useForm<any>();
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
-  const { register: registerLanguages, handleSubmit: handleSubmitLanguages, reset: resetLanguages } = useForm<UpdateLanguagesRequest>();
+  const { register: registerLanguages, handleSubmit: handleSubmitLanguages, reset: resetLanguages } = useForm<LanguagesFormData>();
+  const { register: registerTags, handleSubmit: handleSubmitTags, reset: resetTags } = useForm<TagsFormData>();
   const { register: registerCapabilities, handleSubmit: handleSubmitCapabilities } = useForm<UpdateCapabilitiesRequest>();
-  const { register: registerSocial, handleSubmit: handleSubmitSocial, reset: resetSocial } = useForm<UpdateSocialLinksRequest>();
+  const { register: registerSocial, handleSubmit: handleSubmitSocial, reset: resetSocial } = useForm<SocialLinksFormData>();
 
   const onCreateProfile = (data: CreateTalentProfileRequest) => {
     console.log('Create profile called with data:', data);
@@ -171,9 +208,16 @@ export const ProfilePage = () => {
     });
   };
 
-  const onUpdateLanguages = (data: UpdateLanguagesRequest) => {
-    const languages = data.languages.split(',').map(l => l.trim()).filter(Boolean);
+  const onUpdateLanguages = (data: LanguagesFormData) => {
+    const languages = data.languages.split(',').map((l: string) => l.trim()).filter(Boolean);
     updateLanguages.mutate({ languages }, {
+      onSuccess: () => setEditingSection(null),
+    });
+  };
+
+  const onUpdateTags = (data: TagsFormData) => {
+    const tags = data.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+    updateTags.mutate({ tags }, {
       onSuccess: () => setEditingSection(null),
     });
   };
@@ -184,9 +228,9 @@ export const ProfilePage = () => {
     });
   };
 
-  const onUpdateSocialLinks = (data: any) => {
+  const onUpdateSocialLinks = (data: SocialLinksFormData) => {
     // Transform form data to SocialLink array
-    const socialLinks: any[] = [];
+    const socialLinks = [];
 
     if (data.instagramUrl) {
       socialLinks.push({ platform: 'Instagram', url: data.instagramUrl, followerCount: null });
@@ -204,6 +248,58 @@ export const ProfilePage = () => {
     updateSocialLinks.mutate({ socialLinks }, {
       onSuccess: () => setEditingSection(null),
     });
+  };
+
+  // Portfolio handlers
+  const handlePortfolioUpload = async (file: File, metadata: MediaUploadMetadata) => {
+    try {
+      await uploadAndAddToPortfolio.mutateAsync({
+        file,
+        mediaType: metadata.mediaType,
+        contentType: metadata.contentType,
+        title: metadata.title,
+        description: metadata.description,
+        displayOrder: portfolioItems.length,
+      });
+      setShowMediaUpload(false);
+      alert('Media added to portfolio successfully!');
+    } catch (error: any) {
+      console.error('Error uploading media:', error);
+      alert(`Failed to upload media: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handlePortfolioRemove = async (portfolioItemId: string) => {
+    try {
+      await removeFromPortfolio.mutateAsync(portfolioItemId);
+    } catch (error: any) {
+      console.error('Error removing portfolio item:', error);
+      alert(`Failed to remove item: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleMediaItemClick = (item: PortfolioItemWithMedia) => {
+    setSelectedMediaItem(item);
+  };
+
+  const handleNextMedia = () => {
+    if (!selectedMediaItem) return;
+    const currentIndex = portfolioItems.findIndex(
+      (item) => item.portfolioItemId === selectedMediaItem.portfolioItemId
+    );
+    if (currentIndex < portfolioItems.length - 1) {
+      setSelectedMediaItem(portfolioItems[currentIndex + 1]);
+    }
+  };
+
+  const handlePreviousMedia = () => {
+    if (!selectedMediaItem) return;
+    const currentIndex = portfolioItems.findIndex(
+      (item) => item.portfolioItemId === selectedMediaItem.portfolioItemId
+    );
+    if (currentIndex > 0) {
+      setSelectedMediaItem(portfolioItems[currentIndex - 1]);
+    }
   };
 
   const captureCurrentLocation = () => {
@@ -329,7 +425,7 @@ export const ProfilePage = () => {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <input type="hidden" {...registerCreate('location.mode')} value={LocationMode.SPECIFIC} />
                   <input type="hidden" {...registerCreate('location.latitude')} />
                   <input type="hidden" {...registerCreate('location.longitude')} />
@@ -501,13 +597,50 @@ export const ProfilePage = () => {
                     {profile.location.city}, {profile.location.country}
                   </p>
                 )}
-                <div className="mt-3">
+                <div className="mt-3 flex items-center gap-3">
                   <span className="px-4 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-sm font-semibold shadow-md">
                     {profile.verificationStatus}
                   </span>
+                  {profile.tier && (
+                    <span className={`px-4 py-1.5 rounded-full text-sm font-semibold shadow-md ${
+                      profile.tier === 'PREMIUM' ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white' :
+                      profile.tier === 'GOLD' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white' :
+                      profile.tier === 'SILVER' ? 'bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800' :
+                      'bg-gradient-to-r from-orange-400 to-orange-600 text-white'
+                    }`}>
+                      {profile.tier} TIER
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* Profile Completeness Indicator */}
+            {statistics && (
+              <div className="mt-6 px-6 pb-6 border-t border-slate-200 pt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-slate-700">Profile Completeness</span>
+                  <span className="text-sm font-bold text-slate-900">{statistics.engagementMetrics.profileCompleteness}%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className={`h-3 rounded-full transition-all duration-500 ${
+                      statistics.engagementMetrics.profileCompleteness >= 90 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                      statistics.engagementMetrics.profileCompleteness >= 70 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
+                      statistics.engagementMetrics.profileCompleteness >= 50 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
+                      'bg-gradient-to-r from-red-400 to-red-600'
+                    }`}
+                    style={{ width: `${statistics.engagementMetrics.profileCompleteness}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  {statistics.engagementMetrics.profileCompleteness < 100 &&
+                    'Complete your profile to increase visibility and attract more opportunities!'}
+                  {statistics.engagementMetrics.profileCompleteness === 100 &&
+                    '✨ Perfect! Your profile is complete.'}
+                </p>
+              </div>
+            )}
 
             {profile.bio && (
               <div className="mt-6 pl-6">
@@ -582,7 +715,7 @@ export const ProfilePage = () => {
                     )}
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-700">City</label>
                     <Input {...registerLocation('city')} className="mt-1 h-10" />
@@ -592,7 +725,7 @@ export const ProfilePage = () => {
                     <Input {...registerLocation('country')} className="mt-1 h-10" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Latitude</label>
                     <Input {...registerLocation('latitude')} type="number" step="any" className="mt-1 h-10" readOnly />
@@ -640,7 +773,7 @@ export const ProfilePage = () => {
                   if (editingSection === 'languages') {
                     setEditingSection(null);
                   } else {
-                    resetLanguages({ languages: profile.languages.join(', ') });
+                    resetLanguages({ languages: (profile.languages || []).join(', ') });
                     setEditingSection('languages');
                   }
                 }}
@@ -680,6 +813,68 @@ export const ProfilePage = () => {
           </CardContent>
         </Card>
 
+        {/* Tags Section */}
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                Tags & Specialties
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (editingSection === 'tags') {
+                    setEditingSection(null);
+                  } else {
+                    resetTags({ tags: (profile.tags || []).join(', ') });
+                    setEditingSection('tags');
+                  }
+                }}
+                className="text-blue-600 border-blue-600 hover:bg-blue-50"
+              >
+                {editingSection === 'tags' ? 'Cancel' : 'Edit'}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {editingSection === 'tags' ? (
+              <form onSubmit={handleSubmitTags(onUpdateTags)} className="space-y-4">
+                <div>
+                  <label className="text-sm font-semibold text-slate-700">Tags (comma separated)</label>
+                  <Input
+                    {...registerTags('tags')}
+                    placeholder="Commercial Acting, Horror Films, Product Modeling"
+                    className="mt-1 h-10"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Add searchable keywords that describe your skills and specialties</p>
+                </div>
+                <Button type="submit" disabled={updateTags.isPending} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                  {updateTags.isPending ? 'Saving...' : 'Save'}
+                </Button>
+              </form>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {profile.tags && profile.tags.length > 0 ? (
+                  profile.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-4 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-medium shadow-sm"
+                    >
+                      #{tag}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-slate-500">No tags added yet. Add tags to improve searchability!</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Capabilities Section */}
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
@@ -703,7 +898,7 @@ export const ProfilePage = () => {
           <CardContent>
             {editingSection === 'capabilities' ? (
               <form onSubmit={handleSubmitCapabilities(onUpdateCapabilities)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {['Acting', 'Voiceover', 'Modeling', 'Singing', 'Dancing', 'Hosting'].map((capability) => {
                     const key = `canDo${capability}` as keyof UpdateCapabilitiesRequest;
                     return (
@@ -711,7 +906,7 @@ export const ProfilePage = () => {
                         <input
                           type="checkbox"
                           {...registerCapabilities(key)}
-                          defaultChecked={profile.capabilities[key]}
+                          defaultChecked={Boolean(profile.capabilities[key])}
                           className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-slate-700">{capability}</span>
@@ -787,7 +982,7 @@ export const ProfilePage = () => {
           <CardContent>
             {editingSection === 'social' ? (
               <form onSubmit={handleSubmitSocial(onUpdateSocialLinks)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Instagram</label>
                     <Input {...registerSocial('instagramUrl')} placeholder="https://instagram.com/..." className="mt-1 h-10" />
@@ -850,7 +1045,81 @@ export const ProfilePage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Portfolio Section */}
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Portfolio
+              </CardTitle>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setShowMediaUpload(!showMediaUpload)}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              >
+                {showMediaUpload ? 'Cancel' : 'Add Media'}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {showMediaUpload ? (
+              <div className="mb-6">
+                <MediaUpload onFileSelect={handlePortfolioUpload} />
+                {uploadAndAddToPortfolio.isPending && (
+                  <div className="mt-4 text-center">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                    <p className="text-slate-600 mt-2">Uploading media...</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {isLoadingPortfolio ? (
+                  <div className="text-center py-12">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                    <p className="text-slate-600 mt-4">Loading portfolio...</p>
+                  </div>
+                ) : (
+                  <PortfolioGallery
+                    items={portfolioItems}
+                    onItemClick={handleMediaItemClick}
+                    onItemRemove={handlePortfolioRemove}
+                    isOwner={true}
+                  />
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Media Viewer Modal */}
+      <MediaViewer
+        item={selectedMediaItem}
+        onClose={() => setSelectedMediaItem(null)}
+        onNext={handleNextMedia}
+        onPrevious={handlePreviousMedia}
+        hasNext={
+          selectedMediaItem
+            ? portfolioItems.findIndex(
+                (item) => item.portfolioItemId === selectedMediaItem.portfolioItemId
+              ) <
+              portfolioItems.length - 1
+            : false
+        }
+        hasPrevious={
+          selectedMediaItem
+            ? portfolioItems.findIndex(
+                (item) => item.portfolioItemId === selectedMediaItem.portfolioItemId
+              ) > 0
+            : false
+        }
+      />
     </MainLayout>
   );
 };
