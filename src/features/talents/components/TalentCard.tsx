@@ -1,16 +1,20 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { TalentProfile } from '../../../core/domain/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/Card';
 import { Button } from '../../../shared/components/ui/Button';
+import { getInitials } from '../../../shared/utils/stringUtils';
 
 interface TalentCardProps {
   talent: TalentProfile;
 }
 
 export const TalentCard = ({ talent }: TalentCardProps) => {
+  const [imageError, setImageError] = useState(false);
   // Debug: log rating data
   console.log('Talent Card Data:', {
     name: talent.fullName,
+    profileImageUrl: talent.profileImageUrl,
     tier: talent.tier,
     averageRating: talent.averageRating,
     totalRatings: talent.totalRatings,
@@ -32,17 +36,18 @@ export const TalentCard = ({ talent }: TalentCardProps) => {
   return (
     <Card className="h-full flex flex-col overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-white/80 backdrop-blur-sm">
       <div className="relative">
-        {talent.profileImageUrl ? (
+        {talent.profileImageUrl && talent.profileImageUrl.trim() !== '' && !imageError ? (
           <div className="w-full h-56 overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-100">
             <img
               src={talent.profileImageUrl}
               alt={talent.fullName}
               className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+              onError={() => setImageError(true)}
             />
           </div>
         ) : (
           <div className="w-full h-56 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <span className="text-6xl font-bold text-white/30">{talent.fullName.charAt(0)}</span>
+            <span className="text-6xl font-bold text-white/30">{getInitials(talent.fullName)}</span>
           </div>
         )}
         <div className="absolute top-3 right-3">

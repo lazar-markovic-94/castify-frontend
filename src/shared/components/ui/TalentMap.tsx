@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { TalentProfile } from '../../../core/domain/entities';
 import { useNavigate } from 'react-router-dom';
 import { RatingStars } from './RatingStars';
 import { cn } from '../../lib/utils';
+import { getInitials } from '../../utils/stringUtils';
 
 // Fix for default marker icons in Leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -35,6 +36,80 @@ function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }
     map.setView(center, zoom);
   }, [center, zoom, map]);
   return null;
+}
+
+// Component for talent popup content with image error handling
+function TalentPopupContent({ talent, onViewProfile }: { talent: TalentProfile; onViewProfile: () => void }) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div className="p-2 min-w-[250px]">
+      {/* Profile Image */}
+      {talent.profileImageUrl && talent.profileImageUrl.trim() !== '' && !imageError ? (
+        <img
+          src={talent.profileImageUrl}
+          alt={talent.fullName}
+          className="w-full h-32 object-cover rounded-lg mb-3"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <div className="w-full h-32 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center rounded-lg mb-3">
+          <span className="text-4xl font-bold text-white/30">{getInitials(talent.fullName)}</span>
+        </div>
+      )}
+
+      {/* Name */}
+      <h3 className="font-bold text-lg mb-1">{talent.fullName}</h3>
+
+      {/* Location */}
+      {talent.location.city && talent.location.country && (
+        <p className="text-sm text-gray-600 mb-2">
+          📍 {talent.location.city}, {talent.location.country}
+        </p>
+      )}
+
+      {/* Rating */}
+      {talent.averageRating !== null && talent.totalRatings !== null && (
+        <div className="flex items-center gap-2 mb-2">
+          <RatingStars rating={talent.averageRating} size="sm" />
+          <span className="text-sm text-gray-600">
+            ({talent.totalRatings})
+          </span>
+        </div>
+      )}
+
+      {/* Tier */}
+      {talent.tier && (
+        <span
+          className={cn(
+            'inline-block px-2 py-1 rounded text-xs font-semibold mb-2',
+            talent.tier === 'PREMIUM' &&
+              'bg-purple-100 text-purple-800',
+            talent.tier === 'GOLD' && 'bg-yellow-100 text-yellow-800',
+            talent.tier === 'SILVER' && 'bg-gray-200 text-gray-800',
+            talent.tier === 'BRONZE' && 'bg-orange-100 text-orange-800'
+          )}
+        >
+          {talent.tier} TIER
+        </span>
+      )}
+
+      {/* Bio Preview */}
+      {talent.bio && (
+        <p className="text-sm text-gray-700 line-clamp-2 mb-3">
+          {talent.bio}
+        </p>
+      )}
+
+      {/* View Profile Link */}
+      <button
+        onClick={onViewProfile}
+        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+      >
+        View Profile
+      </button>
+    </div>
+  );
 }
 
 export const TalentMap = ({
@@ -96,67 +171,10 @@ export const TalentMap = ({
             }}
           >
             <Popup>
-              <div className="p-2 min-w-[250px]">
-                {/* Profile Image */}
-                {talent.profileImageUrl && (
-                  <img
-                    src={talent.profileImageUrl}
-                    alt={talent.fullName}
-                    className="w-full h-32 object-cover rounded-lg mb-3"
-                  />
-                )}
-
-                {/* Name */}
-                <h3 className="font-bold text-lg mb-1">{talent.fullName}</h3>
-
-                {/* Location */}
-                {talent.location.city && talent.location.country && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    📍 {talent.location.city}, {talent.location.country}
-                  </p>
-                )}
-
-                {/* Rating */}
-                {talent.averageRating !== null && talent.totalRatings !== null && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <RatingStars rating={talent.averageRating} size="sm" />
-                    <span className="text-sm text-gray-600">
-                      ({talent.totalRatings})
-                    </span>
-                  </div>
-                )}
-
-                {/* Tier */}
-                {talent.tier && (
-                  <span
-                    className={cn(
-                      'inline-block px-2 py-1 rounded text-xs font-semibold mb-2',
-                      talent.tier === 'PREMIUM' &&
-                        'bg-purple-100 text-purple-800',
-                      talent.tier === 'GOLD' && 'bg-yellow-100 text-yellow-800',
-                      talent.tier === 'SILVER' && 'bg-gray-200 text-gray-800',
-                      talent.tier === 'BRONZE' && 'bg-orange-100 text-orange-800'
-                    )}
-                  >
-                    {talent.tier} TIER
-                  </span>
-                )}
-
-                {/* Bio Preview */}
-                {talent.bio && (
-                  <p className="text-sm text-gray-700 line-clamp-2 mb-3">
-                    {talent.bio}
-                  </p>
-                )}
-
-                {/* View Profile Link */}
-                <button
-                  onClick={() => handleMarkerClick(talent.talentProfileId)}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  View Profile
-                </button>
-              </div>
+              <TalentPopupContent
+                talent={talent}
+                onViewProfile={() => handleMarkerClick(talent.talentProfileId)}
+              />
             </Popup>
           </Marker>
         ))}
