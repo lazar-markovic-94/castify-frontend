@@ -4,6 +4,7 @@ import { useTalentProfile } from '../../core/application/useTalents';
 import { useCreateConversation } from '../../core/application/useMessaging';
 import { useCurrentUser } from '../../core/application/useAuth';
 import { usePortfolioItems } from '../../core/application/useMedia';
+import { getInitials } from '../../shared/utils/stringUtils';
 import {
   useTalentRatings,
   useTalentStatistics,
@@ -42,6 +43,9 @@ export const TalentDetailPage = () => {
 
   // Collaboration state
   const [showCollaborationModal, setShowCollaborationModal] = useState(false);
+
+  // Image error state
+  const [imageError, setImageError] = useState(false);
   const {
     data: ratingsData,
     isLoading: isLoadingRatings,
@@ -170,17 +174,23 @@ export const TalentDetailPage = () => {
         <Card>
           <CardContent className="p-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {talent.profileImageUrl && (
-                <div className="md:col-span-1">
+              {/* Profile Image or Initials */}
+              <div className="md:col-span-1">
+                {talent.profileImageUrl && talent.profileImageUrl.trim() !== '' && !imageError ? (
                   <img
                     src={talent.profileImageUrl}
                     alt={talent.fullName}
-                    className="w-full rounded-lg object-cover"
+                    className="w-full rounded-lg object-cover aspect-square"
+                    onError={() => setImageError(true)}
                   />
-                </div>
-              )}
+                ) : (
+                  <div className="w-full aspect-square bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center rounded-lg">
+                    <span className="text-8xl font-bold text-white/30">{getInitials(talent.fullName)}</span>
+                  </div>
+                )}
+              </div>
 
-              <div className={talent.profileImageUrl ? 'md:col-span-2' : 'md:col-span-3'}>
+              <div className="md:col-span-2">
                 <h1 className="text-3xl font-bold mb-2">{talent.fullName}</h1>
 
                 {talent.location.city && talent.location.country && (
