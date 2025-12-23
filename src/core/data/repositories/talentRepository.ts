@@ -1,4 +1,4 @@
-import { apiClient } from '../apiClient';
+import { apiClient, publicApiClient } from '../apiClient';
 import { TalentProfile } from '../../domain/entities';
 import {
   CreateTalentProfileRequest,
@@ -23,12 +23,14 @@ class TalentRepository {
   }
 
   async getProfileById(talentProfileId: string): Promise<TalentProfile> {
-    const response = await apiClient.get<TalentProfile>(`/api/talents/${talentProfileId}`);
+    // Use public client - no authentication required
+    const response = await publicApiClient.get<TalentProfile>(`/api/talents/${talentProfileId}`);
     return response.data;
   }
 
   async getProfileByUserId(userId: string): Promise<TalentProfile> {
-    const response = await apiClient.get<TalentProfile>(`/api/talents/user/${userId}`);
+    // Use public client - no authentication required
+    const response = await publicApiClient.get<TalentProfile>(`/api/talents/user/${userId}`);
     return response.data;
   }
 
@@ -58,7 +60,8 @@ class TalentRepository {
   }
 
   async searchTalents(request: TalentSearchRequest): Promise<PagedResult<TalentProfile>> {
-    const response = await apiClient.post<PagedResult<TalentProfile>>('/api/talents/search', request);
+    // Use public client - no authentication required
+    const response = await publicApiClient.post<PagedResult<TalentProfile>>('/api/talents/search', request);
     return response.data;
   }
 

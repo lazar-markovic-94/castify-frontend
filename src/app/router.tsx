@@ -55,28 +55,11 @@ export const AppRouter = () => {
         {/* Home page - shows landing page for guests, redirects authenticated users */}
         <Route path="/" element={<HomePage />} />
 
-        {/* Client-only routes */}
-        <Route
-          path="/talents"
-          element={
-            <AuthGuard>
-              <RoleGuard allowedRoles={[UserRole.CLIENT]}>
-                <TalentsListPage />
-              </RoleGuard>
-            </AuthGuard>
-          }
-        />
+        {/* Public talent browsing routes - no auth required */}
+        <Route path="/talents" element={<TalentsListPage />} />
+        <Route path="/talents/:id" element={<TalentDetailPage />} />
 
-        <Route
-          path="/talents/:id"
-          element={
-            <AuthGuard>
-              <RoleGuard allowedRoles={[UserRole.CLIENT]}>
-                <TalentDetailPage />
-              </RoleGuard>
-            </AuthGuard>
-          }
-        />
+        {/* Client-only routes */}
 
         <Route
           path="/client/organization"

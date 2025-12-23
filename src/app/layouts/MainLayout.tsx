@@ -35,6 +35,17 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8">
+              {/* Anonymous user navigation */}
+              {!user && (
+                <>
+                  <Link to="/talents" className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors relative group">
+                    Browse Talents
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+                  </Link>
+                </>
+              )}
+
+              {/* Client navigation */}
               {user?.role === UserRole.CLIENT && (
                 <>
                   <Link to="/talents" className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors relative group">
@@ -56,6 +67,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                 </>
               )}
 
+              {/* Talent navigation */}
               {user?.role === UserRole.TALENT && (
                 <>
                   <Link to="/profile" className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors relative group">
@@ -73,17 +85,36 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                 </>
               )}
 
-              <div className="flex items-center gap-4 ml-4 pl-4 border-l border-slate-200">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">{user?.email?.charAt(0).toUpperCase()}</span>
+              {/* Authenticated user section */}
+              {user && (
+                <div className="flex items-center gap-4 ml-4 pl-4 border-l border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">{user?.email?.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <span className="text-sm text-slate-600 hidden md:block">{user?.email}</span>
                   </div>
-                  <span className="text-sm text-slate-600 hidden md:block">{user?.email}</span>
+                  <Button variant="outline" size="sm" onClick={handleLogout} className="border-slate-300 hover:border-blue-600 hover:text-blue-600">
+                    Logout
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleLogout} className="border-slate-300 hover:border-blue-600 hover:text-blue-600">
-                  Logout
-                </Button>
-              </div>
+              )}
+
+              {/* Anonymous user buttons */}
+              {!user && (
+                <div className="flex items-center gap-3">
+                  <Link to="/login">
+                    <Button variant="ghost" size="sm" className="text-slate-700 hover:text-blue-600">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link to="/register">
+                    <Button size="sm" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg">
+                      Get Started
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </nav>
 
             {/* Mobile Menu Button */}
@@ -107,6 +138,20 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
             <nav className="lg:hidden mt-4 pb-4 border-t border-slate-200 pt-4 space-y-3">
+              {/* Anonymous user navigation */}
+              {!user && (
+                <>
+                  <Link
+                    to="/talents"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                  >
+                    Browse Talents
+                  </Link>
+                </>
+              )}
+
+              {/* Client navigation */}
               {user?.role === UserRole.CLIENT && (
                 <>
                   <Link
@@ -140,6 +185,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                 </>
               )}
 
+              {/* Talent navigation */}
               {user?.role === UserRole.TALENT && (
                 <>
                   <Link
@@ -166,25 +212,44 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                 </>
               )}
 
-              <div className="px-4 py-2 border-t border-slate-200 mt-3 pt-3">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">{user?.email?.charAt(0).toUpperCase()}</span>
+              {/* Authenticated user section */}
+              {user && (
+                <div className="px-4 py-2 border-t border-slate-200 mt-3 pt-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">{user?.email?.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <span className="text-sm text-slate-600">{user?.email}</span>
                   </div>
-                  <span className="text-sm text-slate-600">{user?.email}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full border-slate-300 hover:border-blue-600 hover:text-blue-600"
+                  >
+                    Logout
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleLogout();
-                  }}
-                  className="w-full border-slate-300 hover:border-blue-600 hover:text-blue-600"
-                >
-                  Logout
-                </Button>
-              </div>
+              )}
+
+              {/* Anonymous user buttons */}
+              {!user && (
+                <div className="px-4 py-2 border-t border-slate-200 mt-3 pt-3 space-y-2">
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full border-slate-300 hover:border-blue-600 hover:text-blue-600">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                    <Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg">
+                      Get Started
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </nav>
           )}
         </div>
