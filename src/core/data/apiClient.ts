@@ -58,4 +58,13 @@ class ApiClient {
   }
 }
 
+// Authenticated API client (includes JWT token)
 export const apiClient = new ApiClient().instance;
+
+// Public API client (no authentication required)
+export const publicApiClient = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});

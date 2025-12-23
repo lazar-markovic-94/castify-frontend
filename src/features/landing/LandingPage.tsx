@@ -17,6 +17,11 @@ export const LandingPage = () => {
               </span>
             </div>
             <div className="flex items-center gap-3 sm:gap-4">
+              <Link to="/talents">
+                <Button variant="ghost" size="sm" className="text-slate-700 hover:text-blue-600">
+                  Browse Talents
+                </Button>
+              </Link>
               <Link to="/login">
                 <Button variant="ghost" size="sm" className="text-slate-700 hover:text-blue-600">
                   Sign In
@@ -50,8 +55,13 @@ export const LandingPage = () => {
                 Build your dream team with our advanced matching platform.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link to="/register?role=client">
+                <Link to="/talents">
                   <Button size="lg" className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl text-lg px-8 py-6">
+                    Browse Talents
+                  </Button>
+                </Link>
+                <Link to="/register?role=client">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-slate-300 hover:border-blue-600 hover:bg-blue-50 text-slate-700 text-lg px-8 py-6">
                     Post a Job
                   </Button>
                 </Link>
