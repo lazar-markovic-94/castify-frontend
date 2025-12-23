@@ -2,7 +2,9 @@ import { useState, useRef } from 'react';
 import {
   useMyTalentProfile,
   useCreateTalentProfile,
-  useUpdateTalentLocation,
+  useUpdatePrimaryLocation,
+  useAddGeoArea,
+  useRemoveGeoArea,
   useUpdateTalentLanguages,
   useUpdateTalentTags,
   useUpdateTalentCapabilities,
@@ -28,9 +30,11 @@ import { useForm } from 'react-hook-form';
 import { LocationMode } from '../../core/domain/enums';
 import {
   CreateTalentProfileRequest,
-  UpdateLocationRequest,
+  UpdatePrimaryLocationRequest,
+  AddGeoAreaRequest,
   UpdateCapabilitiesRequest,
 } from '../../core/domain/dtos';
+import { GeoArea } from '../../core/domain/entities';
 
 // Form types that match the HTML form structure
 interface LanguagesFormData {
@@ -52,7 +56,9 @@ export const ProfilePage = () => {
   const { data: profile, isLoading, error } = useMyTalentProfile();
   const { data: statistics } = useTalentStatistics(profile?.talentProfileId);
   const createProfile = useCreateTalentProfile();
-  const updateLocation = useUpdateTalentLocation();
+  const updatePrimaryLocation = useUpdatePrimaryLocation();
+  const addGeoArea = useAddGeoArea();
+  const removeGeoArea = useRemoveGeoArea();
   const updateLanguages = useUpdateTalentLanguages();
   const updateTags = useUpdateTalentTags();
   const updateCapabilities = useUpdateTalentCapabilities();
@@ -62,6 +68,8 @@ export const ProfilePage = () => {
 
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [newGeoAreaCity, setNewGeoAreaCity] = useState('');
+  const [newGeoAreaCountry, setNewGeoAreaCountry] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Portfolio state and hooks
@@ -75,13 +83,9 @@ export const ProfilePage = () => {
 
   const { register: registerCreate, handleSubmit: handleSubmitCreate, setValue: setCreateValue } = useForm<CreateTalentProfileRequest>({
     defaultValues: {
-      location: {
-        mode: LocationMode.SPECIFIC,
-        latitude: null,
-        longitude: null,
-        city: null,
-        country: null,
-      },
+      locationMode: LocationMode.SPECIFIC,
+      primaryLocation: undefined,
+      geoAreas: [],
     },
   });
 
@@ -109,15 +113,18 @@ export const ProfilePage = () => {
           const city = data.address?.city || data.address?.town || data.address?.village || '';
           const country = data.address?.country || '';
 
-          setCreateValue('location.latitude', latitude);
-          setCreateValue('location.longitude', longitude);
-          setCreateValue('location.city', city);
-          setCreateValue('location.country', country);
+          setCreateValue('primaryLocation', {
+            latitude,
+            longitude,
+            city,
+            country,
+          });
+
+          // Also add to geoAreas as primary
+          setCreateValue('geoAreas', [{ city, country, isPrimary: true }]);
         } catch (error) {
           console.error('Error reverse geocoding:', error);
-          // Still set lat/lon even if reverse geocoding fails
-          setCreateValue('location.latitude', latitude);
-          setCreateValue('location.longitude', longitude);
+          alert('Failed to get location details. Please enter city and country manually.');
         } finally {
           setIsCapturingCreateLocation(false);
         }
@@ -191,21 +198,51 @@ export const ProfilePage = () => {
     });
   };
 
-  const onUpdateLocation = (data: any) => {
-    // Transform flat form data to nested structure expected by API
-    const locationData: UpdateLocationRequest = {
-      location: {
-        mode: data.mode || LocationMode.SPECIFIC,
-        city: data.city || null,
-        country: data.country || null,
-        latitude: data.latitude ? Number(data.latitude) : null,
-        longitude: data.longitude ? Number(data.longitude) : null,
+  const onUpdatePrimaryLocation = (data: any) => {
+    const locationData: UpdatePrimaryLocationRequest = {
+      primaryLocation: {
+        city: data.city,
+        country: data.country,
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
       }
     };
 
-    updateLocation.mutate(locationData, {
+    updatePrimaryLocation.mutate(locationData, {
       onSuccess: () => setEditingSection(null),
     });
+  };
+
+  const handleAddGeoArea = () => {
+    if (!newGeoAreaCity.trim() || !newGeoAreaCountry.trim()) {
+      alert('Please enter both city and country');
+      return;
+    }
+
+    addGeoArea.mutate(
+      {
+        city: newGeoAreaCity.trim(),
+        country: newGeoAreaCountry.trim(),
+        isPrimary: false,
+      },
+      {
+        onSuccess: () => {
+          setNewGeoAreaCity('');
+          setNewGeoAreaCountry('');
+        },
+        onError: (error: any) => {
+          alert(`Failed to add location: ${error.message || 'Unknown error'}`);
+        },
+      }
+    );
+  };
+
+  const handleRemoveGeoArea = (city: string, country: string) => {
+    if (!confirm(`Remove ${city}, ${country} from service areas?`)) {
+      return;
+    }
+
+    removeGeoArea.mutate({ city, country });
   };
 
   const onUpdateLanguages = (data: LanguagesFormData) => {
@@ -426,18 +463,19 @@ export const ProfilePage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input type="hidden" {...registerCreate('location.mode')} value={LocationMode.SPECIFIC} />
-                  <input type="hidden" {...registerCreate('location.latitude')} />
-                  <input type="hidden" {...registerCreate('location.longitude')} />
+                  <input type="hidden" {...registerCreate('locationMode')} value={LocationMode.SPECIFIC} />
+                  <input type="hidden" {...registerCreate('primaryLocation.latitude')} />
+                  <input type="hidden" {...registerCreate('primaryLocation.longitude')} />
                   <div>
-                    <label className="text-sm font-semibold text-slate-700">City</label>
-                    <Input {...registerCreate('location.city')} placeholder="Los Angeles" className="mt-1 h-11" />
+                    <label className="text-sm font-semibold text-slate-700">Primary City</label>
+                    <Input {...registerCreate('primaryLocation.city')} placeholder="Belgrade" className="mt-1 h-11" />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Country</label>
-                    <Input {...registerCreate('location.country')} placeholder="USA" className="mt-1 h-11" />
+                    <Input {...registerCreate('primaryLocation.country')} placeholder="Serbia" className="mt-1 h-11" />
                   </div>
                 </div>
+                <p className="text-xs text-slate-500">Your primary city is where you're based. You'll be able to add additional service areas after creating your profile.</p>
 
                 <div>
                   <label className="text-sm font-semibold text-slate-700 block mb-2">Profile Image</label>
@@ -588,13 +626,18 @@ export const ProfilePage = () => {
               </div>
               <div className="flex-1 pt-16">
                 <h1 className="text-3xl font-bold text-slate-900">{profile.fullName}</h1>
-                {profile.location.city && profile.location.country && (
+                {profile.primaryLocation && (
                   <p className="text-slate-600 flex items-center gap-1 mt-1">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    {profile.location.city}, {profile.location.country}
+                    {profile.primaryLocation.city}, {profile.primaryLocation.country}
+                  </p>
+                )}
+                {profile.geoAreas && profile.geoAreas.length > 0 && (
+                  <p className="text-sm text-slate-500 mt-1">
+                    Service areas: {profile.geoAreas.map(area => `${area.city}, ${area.country}`).join(' • ')}
                   </p>
                 )}
                 <div className="mt-3 flex items-center gap-3">
@@ -650,7 +693,7 @@ export const ProfilePage = () => {
           </CardContent>
         </Card>
 
-        {/* Location Section */}
+        {/* Primary Location Section */}
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -658,36 +701,37 @@ export const ProfilePage = () => {
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 </svg>
-                Location
+                Primary Location
               </CardTitle>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  if (editingSection === 'location') {
+                  if (editingSection === 'primaryLocation') {
                     setEditingSection(null);
                   } else {
-                    resetLocation({
-                      mode: profile.location.mode || LocationMode.SPECIFIC,
-                      city: profile.location.city || '',
-                      country: profile.location.country || '',
-                      latitude: profile.location.latitude || '',
-                      longitude: profile.location.longitude || '',
-                    });
-                    setEditingSection('location');
+                    if (profile.primaryLocation) {
+                      resetLocation({
+                        city: profile.primaryLocation.city || '',
+                        country: profile.primaryLocation.country || '',
+                        latitude: profile.primaryLocation.latitude || '',
+                        longitude: profile.primaryLocation.longitude || '',
+                      });
+                    }
+                    setEditingSection('primaryLocation');
                   }
                 }}
                 className="text-blue-600 border-blue-600 hover:bg-blue-50"
               >
-                {editingSection === 'location' ? 'Cancel' : 'Edit'}
+                {editingSection === 'primaryLocation' ? 'Cancel' : 'Edit'}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            {editingSection === 'location' ? (
-              <form onSubmit={handleSubmitLocation(onUpdateLocation)} className="space-y-4">
+            {editingSection === 'primaryLocation' ? (
+              <form onSubmit={handleSubmitLocation(onUpdatePrimaryLocation)} className="space-y-4">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-slate-600">Enter your location manually or use your current location</p>
+                  <p className="text-sm text-slate-600">Your primary location (where you're based)</p>
                   <Button
                     type="button"
                     variant="outline"
@@ -708,7 +752,6 @@ export const ProfilePage = () => {
                       <span className="flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         Use Current Location
                       </span>
@@ -718,41 +761,138 @@ export const ProfilePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-700">City</label>
-                    <Input {...registerLocation('city')} className="mt-1 h-10" />
+                    <Input {...registerLocation('city')} className="mt-1 h-10" required />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Country</label>
-                    <Input {...registerLocation('country')} className="mt-1 h-10" />
+                    <Input {...registerLocation('country')} className="mt-1 h-10" required />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Latitude</label>
-                    <Input {...registerLocation('latitude')} type="number" step="any" className="mt-1 h-10" readOnly />
+                    <Input {...registerLocation('latitude')} type="number" step="any" className="mt-1 h-10" required />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Longitude</label>
-                    <Input {...registerLocation('longitude')} type="number" step="any" className="mt-1 h-10" readOnly />
+                    <Input {...registerLocation('longitude')} type="number" step="any" className="mt-1 h-10" required />
                   </div>
                 </div>
-                <Button type="submit" disabled={updateLocation.isPending} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                  {updateLocation.isPending ? 'Saving...' : 'Save Location'}
+                <Button type="submit" disabled={updatePrimaryLocation.isPending} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                  {updatePrimaryLocation.isPending ? 'Saving...' : 'Save Primary Location'}
                 </Button>
               </form>
             ) : (
               <div className="space-y-2">
-                <p className="text-slate-700">
-                  {profile.location.city && profile.location.country
-                    ? `${profile.location.city}, ${profile.location.country}`
-                    : 'No location set'}
-                </p>
-                {profile.location.latitude && profile.location.longitude && (
-                  <p className="text-sm text-slate-500">
-                    Coordinates: {profile.location.latitude.toFixed(4)}, {profile.location.longitude.toFixed(4)}
-                  </p>
+                {profile.primaryLocation ? (
+                  <>
+                    <p className="text-slate-700">
+                      {profile.primaryLocation.city}, {profile.primaryLocation.country}
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      Coordinates: {profile.primaryLocation.latitude.toFixed(4)}, {profile.primaryLocation.longitude.toFixed(4)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-slate-500">No primary location set</p>
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Service Areas Section */}
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              Service Areas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-slate-600 mb-4">
+              List all cities where you're available for work. Agencies will see these locations when searching for talent.
+            </p>
+
+            {/* Current GEO Areas */}
+            {profile.geoAreas && profile.geoAreas.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3">Current Service Areas:</h4>
+                <div className="flex flex-wrap gap-2">
+                  {profile.geoAreas.map((area) => (
+                    <div
+                      key={`${area.city}-${area.country}`}
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+                        area.isPrimary
+                          ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      <span>{area.city}, {area.country}</span>
+                      {area.isPrimary && (
+                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Primary</span>
+                      )}
+                      {!area.isPrimary && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGeoArea(area.city, area.country)}
+                          disabled={removeGeoArea.isPending}
+                          className="hover:text-red-600 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add New GEO Area */}
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-semibold text-slate-700 mb-3">Add New Service Area:</h4>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  placeholder="City (e.g., Novi Sad)"
+                  value={newGeoAreaCity}
+                  onChange={(e) => setNewGeoAreaCity(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Country (e.g., Serbia)"
+                  value={newGeoAreaCountry}
+                  onChange={(e) => setNewGeoAreaCountry(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleAddGeoArea}
+                  disabled={addGeoArea.isPending || !newGeoAreaCity.trim() || !newGeoAreaCountry.trim()}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                >
+                  {addGeoArea.isPending ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 inline" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">Example: Belgrade, Serbia • Novi Sad, Serbia • Sombor, Serbia</p>
+            </div>
           </CardContent>
         </Card>
 

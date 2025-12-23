@@ -22,7 +22,7 @@ export const TalentCard = ({ talent }: TalentCardProps) => {
     successRate: talent.successRate
   });
 
-  const capabilitiesText = [
+  const capabilitiesText = talent.capabilities ? [
     talent.capabilities.canDoActing && 'Acting',
     talent.capabilities.canDoVoiceover && 'Voiceover',
     talent.capabilities.canDoModeling && 'Modeling',
@@ -31,7 +31,7 @@ export const TalentCard = ({ talent }: TalentCardProps) => {
     talent.capabilities.canDoHosting && 'Hosting',
   ]
     .filter(Boolean)
-    .join(', ');
+    .join(', ') : '';
 
   return (
     <Card className="h-full flex flex-col overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-white/80 backdrop-blur-sm">
@@ -59,7 +59,7 @@ export const TalentCard = ({ talent }: TalentCardProps) => {
 
       <CardHeader className="pb-3">
         <CardTitle className="text-xl font-bold text-slate-900 mb-1">{talent.fullName}</CardTitle>
-        {talent.location.city && talent.location.country && (
+        {talent.location && talent.location.city && talent.location.country && (
           <p className="text-sm text-slate-500 flex items-center gap-1">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
