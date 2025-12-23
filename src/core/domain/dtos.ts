@@ -1,5 +1,5 @@
-import { UserRole, VerificationStatus, OrgType, TalentTier } from './enums';
-import { Location, SocialLink } from './entities';
+import { UserRole, VerificationStatus, OrgType, TalentTier, LocationMode } from './enums';
+import { PrimaryLocation, GeoArea, SocialLink } from './entities';
 
 // Auth DTOs
 export interface RegisterRequest {
@@ -18,12 +18,29 @@ export interface LoginRequest {
 export interface CreateTalentProfileRequest {
   fullName: string;
   bio?: string;
-  location: Location;
+  locationMode?: LocationMode;
+  primaryLocation?: PrimaryLocation;
+  geoAreas?: GeoArea[];
   profileImageUrl?: string;
 }
 
-export interface UpdateLocationRequest {
-  location: Location;
+export interface UpdatePrimaryLocationRequest {
+  primaryLocation: PrimaryLocation;
+}
+
+export interface AddGeoAreaRequest {
+  city: string;
+  country: string;
+  isPrimary?: boolean;
+}
+
+export interface RemoveGeoAreaRequest {
+  city: string;
+  country: string;
+}
+
+export interface UpdateGeoAreasRequest {
+  geoAreas: GeoArea[];
 }
 
 export interface UpdateLanguagesRequest {

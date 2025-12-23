@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { talentRepository } from '../data/repositories';
 import {
   CreateTalentProfileRequest,
-  UpdateLocationRequest,
+  UpdatePrimaryLocationRequest,
+  AddGeoAreaRequest,
+  RemoveGeoAreaRequest,
+  UpdateGeoAreasRequest,
   UpdateLanguagesRequest,
   UpdateTagsRequest,
   UpdateCapabilitiesRequest,
@@ -52,11 +55,44 @@ export const useCreateTalentProfile = () => {
   });
 };
 
-export const useUpdateTalentLocation = () => {
+export const useUpdatePrimaryLocation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: UpdateLocationRequest) => talentRepository.updateLocation(request),
+    mutationFn: (request: UpdatePrimaryLocationRequest) => talentRepository.updatePrimaryLocation(request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+    },
+  });
+};
+
+export const useAddGeoArea = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: AddGeoAreaRequest) => talentRepository.addGeoArea(request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+    },
+  });
+};
+
+export const useRemoveGeoArea = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: RemoveGeoAreaRequest) => talentRepository.removeGeoArea(request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+    },
+  });
+};
+
+export const useUpdateGeoAreas = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: UpdateGeoAreasRequest) => talentRepository.updateGeoAreas(request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
     },

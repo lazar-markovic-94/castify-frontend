@@ -16,13 +16,19 @@ export interface AuthCredentials {
   role: UserRole;
 }
 
-// Location
-export interface Location {
-  mode: LocationMode;
-  latitude: number | null;
-  longitude: number | null;
-  city: string | null;
-  country: string | null;
+// Primary Location (with coordinates for distance search)
+export interface PrimaryLocation {
+  latitude: number;
+  longitude: number;
+  city: string;
+  country: string;
+}
+
+// Geographical Service Area
+export interface GeoArea {
+  city: string;
+  country: string;
+  isPrimary: boolean;
 }
 
 // Talent Capabilities
@@ -49,7 +55,9 @@ export interface TalentProfile {
   userId: string;
   fullName: string;
   bio: string | null;
-  location: Location;
+  locationMode: LocationMode;
+  primaryLocation: PrimaryLocation | null;
+  geoAreas: GeoArea[];
   languages: string[];
   tags: string[];
   capabilities: TalentCapabilities;

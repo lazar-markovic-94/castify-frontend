@@ -152,14 +152,14 @@ export const TalentDetailPage = () => {
     }
   };
 
-  const capabilities = [
+  const capabilities = talent.capabilities ? [
     talent.capabilities.canDoActing && 'Acting',
     talent.capabilities.canDoVoiceover && 'Voiceover',
     talent.capabilities.canDoModeling && 'Modeling',
     talent.capabilities.canDoSinging && 'Singing',
     talent.capabilities.canDoDancing && 'Dancing',
     talent.capabilities.canDoHosting && 'Hosting',
-  ].filter((cap): cap is string => Boolean(cap));
+  ].filter((cap): cap is string => Boolean(cap)) : [];
 
   return (
     <MainLayout>
@@ -197,10 +197,34 @@ export const TalentDetailPage = () => {
                   <div className="md:col-span-2">
                     <h1 className="text-3xl font-bold mb-2">{talent.fullName}</h1>
 
-                    {talent.location.city && talent.location.country && (
-                      <p className="text-muted-foreground mb-4">
-                        {talent.location.city}, {talent.location.country}
+                    {talent.primaryLocation && (
+                      <p className="text-muted-foreground mb-2">
+                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        </svg>
+                        Based in: {talent.primaryLocation.city}, {talent.primaryLocation.country}
                       </p>
+                    )}
+
+                    {talent.geoAreas && talent.geoAreas.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm font-semibold text-slate-700 mb-2">Service Areas:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {talent.geoAreas.map((area) => (
+                            <span
+                              key={`${area.city}-${area.country}`}
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
+                                area.isPrimary
+                                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {area.city}, {area.country}
+                              {area.isPrimary && <span className="ml-1 text-xs">(Primary)</span>}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     )}
 
                     {talent.averageRating !== null && talent.totalRatings !== null && talent.totalRatings > 0 && (

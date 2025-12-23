@@ -2,7 +2,10 @@ import { apiClient, publicApiClient } from '../apiClient';
 import { TalentProfile } from '../../domain/entities';
 import {
   CreateTalentProfileRequest,
-  UpdateLocationRequest,
+  UpdatePrimaryLocationRequest,
+  AddGeoAreaRequest,
+  RemoveGeoAreaRequest,
+  UpdateGeoAreasRequest,
   UpdateLanguagesRequest,
   UpdateTagsRequest,
   UpdateCapabilitiesRequest,
@@ -34,8 +37,23 @@ class TalentRepository {
     return response.data;
   }
 
-  async updateLocation(request: UpdateLocationRequest): Promise<TalentProfile> {
-    const response = await apiClient.put<TalentProfile>('/api/talents/location', request);
+  async updatePrimaryLocation(request: UpdatePrimaryLocationRequest): Promise<TalentProfile> {
+    const response = await apiClient.put<TalentProfile>('/api/talents/primary-location', request);
+    return response.data;
+  }
+
+  async addGeoArea(request: AddGeoAreaRequest): Promise<TalentProfile> {
+    const response = await apiClient.post<TalentProfile>('/api/talents/geo-areas', request);
+    return response.data;
+  }
+
+  async removeGeoArea(request: RemoveGeoAreaRequest): Promise<TalentProfile> {
+    const response = await apiClient.delete<TalentProfile>('/api/talents/geo-areas', { data: request });
+    return response.data;
+  }
+
+  async updateGeoAreas(request: UpdateGeoAreasRequest): Promise<TalentProfile> {
+    const response = await apiClient.put<TalentProfile>('/api/talents/geo-areas', request);
     return response.data;
   }
 

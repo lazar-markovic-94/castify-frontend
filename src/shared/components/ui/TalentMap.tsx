@@ -62,9 +62,9 @@ function TalentPopupContent({ talent, onViewProfile }: { talent: TalentProfile; 
       <h3 className="font-bold text-lg mb-1">{talent.fullName}</h3>
 
       {/* Location */}
-      {talent.location.city && talent.location.country && (
+      {talent.primaryLocation && talent.primaryLocation.city && talent.primaryLocation.country && (
         <p className="text-sm text-gray-600 mb-2">
-          📍 {talent.location.city}, {talent.location.country}
+          📍 {talent.primaryLocation.city}, {talent.primaryLocation.country}
         </p>
       )}
 
@@ -124,8 +124,9 @@ export const TalentMap = ({
   // Filter talents that have location coordinates
   const talentsWithLocation = talents.filter(
     (talent) =>
-      talent.location.latitude !== null &&
-      talent.location.longitude !== null
+      talent.primaryLocation &&
+      talent.primaryLocation.latitude !== null &&
+      talent.primaryLocation.longitude !== null
   );
 
   // Adjust map bounds to fit all markers
@@ -133,8 +134,8 @@ export const TalentMap = ({
     if (mapRef.current && talentsWithLocation.length > 0) {
       const bounds = L.latLngBounds(
         talentsWithLocation.map((talent) => [
-          Number(talent.location.latitude),
-          Number(talent.location.longitude),
+          Number(talent.primaryLocation!.latitude),
+          Number(talent.primaryLocation!.longitude),
         ])
       );
       mapRef.current.fitBounds(bounds, { padding: [50, 50] });
@@ -163,8 +164,8 @@ export const TalentMap = ({
           <Marker
             key={talent.talentProfileId}
             position={[
-              Number(talent.location.latitude),
-              Number(talent.location.longitude),
+              Number(talent.primaryLocation!.latitude),
+              Number(talent.primaryLocation!.longitude),
             ]}
             eventHandlers={{
               click: () => handleMarkerClick(talent.talentProfileId),
