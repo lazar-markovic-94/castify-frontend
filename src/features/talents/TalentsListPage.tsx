@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchTalents } from '../../core/application/useTalents';
 import { TalentSearchRequest } from '../../core/domain/dtos';
 import { TalentCard } from './components/TalentCard';
 import { TalentFilters } from './components/TalentFilters';
 import { TalentMap } from '../../shared/components/ui/TalentMap';
 import { MainLayout } from '../../app/layouts/MainLayout';
+import { TalentCardSkeleton } from '../../shared/components/ui/SkeletonLoader';
+import { cardContainer, fadeIn } from '../../shared/lib/animations';
 
 type ViewMode = 'list' | 'map';
 
@@ -42,8 +45,10 @@ export const TalentsListPage = () => {
         {/* View Mode Toggle */}
         <div className="flex justify-center px-4">
           <div className="inline-flex rounded-lg border border-slate-300 bg-white p-1 shadow-sm w-full sm:w-auto">
-            <button
+            <motion.button
               onClick={() => setViewMode('list')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                 viewMode === 'list'
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
@@ -60,9 +65,11 @@ export const TalentsListPage = () => {
               </svg>
               <span className="hidden sm:inline">List View</span>
               <span className="sm:hidden">List</span>
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={() => setViewMode('map')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                 viewMode === 'map'
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
@@ -79,7 +86,7 @@ export const TalentsListPage = () => {
               </svg>
               <span className="hidden sm:inline">Map View</span>
               <span className="sm:hidden">Map</span>
-            </button>
+            </motion.button>
           </div>
         </div>
 
@@ -103,10 +110,16 @@ export const TalentsListPage = () => {
 
           <div className="lg:col-span-3">
             {isLoading && (
-              <div className="text-center py-20">
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent shadow-lg"></div>
-                <p className="text-slate-600 mt-6 text-lg font-medium">Discovering amazing talents...</p>
-              </div>
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"
+                variants={cardContainer}
+                initial="hidden"
+                animate="visible"
+              >
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <TalentCardSkeleton key={i} />
+                ))}
+              </motion.div>
             )}
 
             {error && (
@@ -137,13 +150,25 @@ export const TalentsListPage = () => {
 
             {talents && talents.length > 0 && (
               <>
-                {viewMode === 'list' ? (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                      {talents.map((talent) => (
-                        <TalentCard key={talent.talentProfileId} talent={talent} />
-                      ))}
-                    </div>
+                <AnimatePresence mode="wait">
+                  {viewMode === 'list' ? (
+                    <motion.div
+                      key="list-view"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <motion.div
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"
+                        variants={cardContainer}
+                        initial="hidden"
+                        animate="visible"
+                      >
+                        {talents.map((talent) => (
+                          <TalentCard key={talent.talentProfileId} talent={talent} />
+                        ))}
+                      </motion.div>
 
                     {totalPages > 1 && (
                       <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-2 mt-8 px-4">
@@ -192,17 +217,26 @@ export const TalentsListPage = () => {
                         </button>
                       </div>
                     )}
-                  </>
-                ) : (
-                  <TalentMap
-                    talents={talents}
-                    center={
-                      searchRequest.latitude && searchRequest.longitude
-                        ? [searchRequest.latitude, searchRequest.longitude]
-                        : undefined
-                    }
-                  />
-                )}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="map-view"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <TalentMap
+                        talents={talents}
+                        center={
+                          searchRequest.latitude && searchRequest.longitude
+                            ? [searchRequest.latitude, searchRequest.longitude]
+                            : undefined
+                        }
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </>
             )}
           </div>

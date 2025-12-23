@@ -2,11 +2,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../core/application/useAuth';
 import { UserRole } from '../../core/domain/enums';
 import { Button } from '../../shared/components/ui/Button';
 import { Input } from '../../shared/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../shared/components/ui/Card';
+import { fadeIn } from '../../shared/lib/animations';
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -36,7 +38,12 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+    <motion.div
+      className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 p-4"
+      variants={fadeIn}
+      initial="hidden"
+      animate="visible"
+    >
       <Card className="w-full max-w-md bg-white/80 backdrop-blur-sm border-0 shadow-2xl">
         <CardHeader className="text-center space-y-2 pb-6">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg mb-2">
@@ -155,6 +162,6 @@ export const RegisterPage = () => {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 };

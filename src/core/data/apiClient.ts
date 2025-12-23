@@ -22,8 +22,13 @@ class ApiClient {
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
         const token = storageService.getToken();
+
+        console.log('🔑 Token from storage:', token ? `${token.substring(0, 20)}...` : 'NULL');
+
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
+        } else if (!token) {
+          console.error('❌ NO TOKEN FOUND IN STORAGE!');
         }
 
         // If sending FormData, remove Content-Type header to let axios set it automatically
@@ -31,17 +36,34 @@ class ApiClient {
           delete config.headers['Content-Type'];
         }
 
+        // Log request details
+        console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
+          data: config.data,
+          hasAuthHeader: !!config.headers?.Authorization,
+          authHeaderPreview: config.headers?.Authorization?.substring(0, 30) + '...',
+        });
+
         return config;
       },
       (error) => {
+        console.error('[API Request Error]', error);
         return Promise.reject(error);
       }
     );
 
     // Response interceptor for handling errors
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`, response.data);
+        return response;
+      },
       (error) => {
+        console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
+        console.error('❌ Status:', error.response?.status);
+        console.error('❌ Status Text:', error.response?.statusText);
+        console.error('❌ Response Data:', JSON.stringify(error.response?.data, null, 2));
+        console.error('❌ Error Message:', error.message);
+
         if (error.response?.status === 401) {
           // Clear auth data on 401
           storageService.clearAuth();

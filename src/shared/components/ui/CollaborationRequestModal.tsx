@@ -1,8 +1,10 @@
 import { useForm } from 'react-hook-form';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
 import { Card, CardContent } from './Card';
 import { Input } from './Input';
 import { CreateCollaborationRequest } from '../../../core/domain/dtos';
+import { modalBackdrop, modalContent, modalConfig } from '../../lib/animations';
 
 interface CollaborationRequestModalProps {
   talentProfileId: string;
@@ -49,9 +51,26 @@ export const CollaborationRequestModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardContent className="p-8">
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        variants={modalBackdrop}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        onClick={onClose}
+      >
+        <motion.div
+          variants={modalContent}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          transition={modalConfig}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-2xl"
+        >
+          <Card className="w-full max-h-[90vh] overflow-y-auto">
+            <CardContent className="p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold">Request Collaboration</h2>
@@ -191,6 +210,8 @@ export const CollaborationRequestModal = ({
           </form>
         </CardContent>
       </Card>
-    </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };

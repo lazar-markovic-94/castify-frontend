@@ -12,6 +12,7 @@ import {
   useUpdateProfileImage,
 } from '../../core/application/useTalents';
 import { useUploadImage } from '../../core/application/useUpload';
+import { useToast } from '../../shared/contexts/ToastContext';
 import {
   usePortfolioItems,
   useUploadAndAddToPortfolio,
@@ -65,6 +66,7 @@ export const ProfilePage = () => {
   const updateSocialLinks = useUpdateTalentSocialLinks();
   const updateProfileImage = useUpdateProfileImage();
   const uploadImage = useUploadImage();
+  const { showSuccess, showError } = useToast();
 
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -170,10 +172,11 @@ export const ProfilePage = () => {
       } else {
         // If updating profile, call update endpoint
         await updateProfileImage.mutateAsync(imageUrl);
+        showSuccess('Profile image updated successfully!');
       }
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      alert(`Failed to upload image: ${error.message || 'Unknown error'}`);
+      showError(`Failed to upload image: ${error.message || 'Unknown error'}`);
       setProfileImagePreview(null);
     }
   };
@@ -190,10 +193,11 @@ export const ProfilePage = () => {
     createProfile.mutate(data, {
       onError: (error: any) => {
         console.error('Create profile error:', error);
-        alert(`Failed to create profile: ${error.message || 'Unknown error'}`);
+        showError(`Failed to create profile: ${error.message || 'Unknown error'}`);
       },
       onSuccess: (profile) => {
         console.log('Profile created successfully:', profile);
+        showSuccess('Profile created successfully! Welcome to Castify!');
       }
     });
   };
@@ -209,13 +213,17 @@ export const ProfilePage = () => {
     };
 
     updatePrimaryLocation.mutate(locationData, {
-      onSuccess: () => setEditingSection(null),
+      onSuccess: () => {
+        setEditingSection(null);
+        showSuccess('Primary location updated successfully!');
+      },
+      onError: () => showError('Failed to update primary location'),
     });
   };
 
   const handleAddGeoArea = () => {
     if (!newGeoAreaCity.trim() || !newGeoAreaCountry.trim()) {
-      alert('Please enter both city and country');
+      showError('Please enter both city and country');
       return;
     }
 
@@ -229,9 +237,10 @@ export const ProfilePage = () => {
         onSuccess: () => {
           setNewGeoAreaCity('');
           setNewGeoAreaCountry('');
+          showSuccess('Service area added successfully!');
         },
         onError: (error: any) => {
-          alert(`Failed to add location: ${error.message || 'Unknown error'}`);
+          showError(`Failed to add location: ${error.message || 'Unknown error'}`);
         },
       }
     );
@@ -242,26 +251,41 @@ export const ProfilePage = () => {
       return;
     }
 
-    removeGeoArea.mutate({ city, country });
+    removeGeoArea.mutate({ city, country }, {
+      onSuccess: () => showSuccess('Service area removed successfully!'),
+      onError: () => showError('Failed to remove service area'),
+    });
   };
 
   const onUpdateLanguages = (data: LanguagesFormData) => {
     const languages = data.languages.split(',').map((l: string) => l.trim()).filter(Boolean);
     updateLanguages.mutate({ languages }, {
-      onSuccess: () => setEditingSection(null),
+      onSuccess: () => {
+        setEditingSection(null);
+        showSuccess('Languages updated successfully!');
+      },
+      onError: () => showError('Failed to update languages'),
     });
   };
 
   const onUpdateTags = (data: TagsFormData) => {
     const tags = data.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
     updateTags.mutate({ tags }, {
-      onSuccess: () => setEditingSection(null),
+      onSuccess: () => {
+        setEditingSection(null);
+        showSuccess('Tags updated successfully!');
+      },
+      onError: () => showError('Failed to update tags'),
     });
   };
 
   const onUpdateCapabilities = (data: UpdateCapabilitiesRequest) => {
     updateCapabilities.mutate(data, {
-      onSuccess: () => setEditingSection(null),
+      onSuccess: () => {
+        setEditingSection(null);
+        showSuccess('Capabilities updated successfully!');
+      },
+      onError: () => showError('Failed to update capabilities'),
     });
   };
 
@@ -283,7 +307,11 @@ export const ProfilePage = () => {
     }
 
     updateSocialLinks.mutate({ socialLinks }, {
-      onSuccess: () => setEditingSection(null),
+      onSuccess: () => {
+        setEditingSection(null);
+        showSuccess('Social links updated successfully!');
+      },
+      onError: () => showError('Failed to update social links'),
     });
   };
 
@@ -299,19 +327,20 @@ export const ProfilePage = () => {
         displayOrder: portfolioItems.length,
       });
       setShowMediaUpload(false);
-      alert('Media added to portfolio successfully!');
+      showSuccess('Media added to portfolio successfully!');
     } catch (error: any) {
       console.error('Error uploading media:', error);
-      alert(`Failed to upload media: ${error.message || 'Unknown error'}`);
+      showError(`Failed to upload media: ${error.message || 'Unknown error'}`);
     }
   };
 
   const handlePortfolioRemove = async (portfolioItemId: string) => {
     try {
       await removeFromPortfolio.mutateAsync(portfolioItemId);
+      showSuccess('Portfolio item removed successfully!');
     } catch (error: any) {
       console.error('Error removing portfolio item:', error);
-      alert(`Failed to remove item: ${error.message || 'Unknown error'}`);
+      showError(`Failed to remove item: ${error.message || 'Unknown error'}`);
     }
   };
 
