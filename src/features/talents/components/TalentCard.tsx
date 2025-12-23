@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { TalentProfile } from '../../../core/domain/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/Card';
 import { Button } from '../../../shared/components/ui/Button';
 import { getInitials } from '../../../shared/utils/stringUtils';
+import { cardItem } from '../../../shared/lib/animations';
 
 interface TalentCardProps {
   talent: TalentProfile;
@@ -34,8 +36,14 @@ export const TalentCard = ({ talent }: TalentCardProps) => {
     .join(', ') : '';
 
   return (
-    <Card className="h-full flex flex-col overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-white/80 backdrop-blur-sm">
-      <div className="relative">
+    <motion.div
+      variants={cardItem}
+      initial="hidden"
+      animate="visible"
+      whileHover={{ y: -8, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
+    >
+      <Card className="h-full flex flex-col overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-white/80 backdrop-blur-sm">
+        <div className="relative">
         {talent.profileImageUrl && talent.profileImageUrl.trim() !== '' && !imageError ? (
           <div className="w-full h-56 overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-100">
             <img
@@ -142,5 +150,6 @@ export const TalentCard = ({ talent }: TalentCardProps) => {
         </div>
       </CardContent>
     </Card>
+    </motion.div>
   );
 };

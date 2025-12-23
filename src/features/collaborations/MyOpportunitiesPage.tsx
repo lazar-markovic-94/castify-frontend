@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTalentCollaborations } from '../../core/application/useCollaborations';
 import { MainLayout } from '../../app/layouts/MainLayout';
 import { Card, CardContent } from '../../shared/components/ui/Card';
@@ -143,9 +144,11 @@ export const MyOpportunitiesPage = () => {
           <CardContent className="p-4">
             <div className="flex flex-wrap gap-2">
               {statusTabs.map((tab) => (
-                <button
+                <motion.button
                   key={tab.label}
                   onClick={() => setSelectedStatus(tab.value)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     selectedStatus === tab.value
                       ? 'bg-purple-600 text-white'
@@ -158,7 +161,7 @@ export const MyOpportunitiesPage = () => {
                       {newRequestsCount}
                     </span>
                   )}
-                </button>
+                </motion.button>
               ))}
             </div>
           </CardContent>
@@ -200,22 +203,30 @@ export const MyOpportunitiesPage = () => {
             </CardContent>
           </Card>
         ) : (
-          <>
-            <div className="space-y-4">
-              {collaborationsData.collaborations.map(renderCollaborationCard)}
-            </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedStatus || 'all'}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="space-y-4">
+                {collaborationsData.collaborations.map(renderCollaborationCard)}
+              </div>
 
-            {/* Summary */}
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-gray-600">
-                  Showing <span className="font-semibold">{collaborationsData.total}</span>{' '}
-                  {selectedStatus ? `${selectedStatus.replace('_', ' ').toLowerCase()} ` : ''}
-                  {collaborationsData.total === 1 ? 'opportunity' : 'opportunities'}
-                </p>
-              </CardContent>
-            </Card>
-          </>
+              {/* Summary */}
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-gray-600">
+                    Showing <span className="font-semibold">{collaborationsData.total}</span>{' '}
+                    {selectedStatus ? `${selectedStatus.replace('_', ' ').toLowerCase()} ` : ''}
+                    {collaborationsData.total === 1 ? 'opportunity' : 'opportunities'}
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </AnimatePresence>
         )}
       </div>
     </MainLayout>

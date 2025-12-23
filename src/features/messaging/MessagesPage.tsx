@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useConversations, useMessages, useSendMessage, useMarkMessageAsRead } from '../../core/application/useMessaging';
 import { MainLayout } from '../../app/layouts/MainLayout';
 import { Card, CardContent } from '../../shared/components/ui/Card';
@@ -9,6 +10,9 @@ import { useCurrentUser } from '../../core/application/useAuth';
 import { formatRelativeTime } from '../../shared/lib/utils';
 import { useTalentProfileByUserId } from '../../core/application/useTalents';
 import { useClientOrgByUserId } from '../../core/application/useClientOrg';
+import { MessageSkeleton, ConversationSkeleton } from '../../shared/components/ui/SkeletonLoader';
+import { messageEnter, listItem } from '../../shared/lib/animations';
+import { useToast } from '../../shared/contexts/ToastContext';
 
 // Component to fetch and display participant name
 const ParticipantName = ({ conversation, currentUser }: { conversation: any; currentUser: any }) => {
@@ -39,6 +43,7 @@ export const MessagesPage = () => {
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const { showError } = useToast();
 
   const { data: user } = useCurrentUser();
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
@@ -78,7 +83,9 @@ export const MessagesPage = () => {
     if (!messages || messages.length === 0 || !user || !selectedConversationId) return;
 
     const unreadMessages = messages.filter(m =>
-      !m.isRead && m.senderUserId !== user.userId
+      !m.isRead &&
+      m.senderUserId !== user.userId &&
+      !m.messageId.startsWith('temp-') // Skip temporary optimistic messages
     );
 
     if (unreadMessages.length === 0) return;
@@ -116,11 +123,18 @@ export const MessagesPage = () => {
     e.preventDefault();
     if (!messageText.trim() || !selectedConversationId) return;
 
+    const messageContent = messageText.trim();
+
     sendMessage.mutate(
-      { content: messageText },
+      { content: messageContent },
       {
         onSuccess: () => {
           setMessageText('');
+        },
+        onError: (error: any) => {
+          const errorMessage = error.response?.data?.message || error.message || 'Failed to send message';
+          showError(`Message failed to send: ${errorMessage}. Please try again.`);
+          console.error('Send message error:', error);
         },
       }
     );
@@ -155,8 +169,10 @@ export const MessagesPage = () => {
               </div>
 
               {conversationsLoading && (
-                <div className="flex items-center justify-center py-8">
-                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <ConversationSkeleton key={i} />
+                  ))}
                 </div>
               )}
 
@@ -224,19 +240,27 @@ export const MessagesPage = () => {
               <>
                 <CardContent className="flex-1 p-6 overflow-y-auto">
                   {messagesLoading && (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                    <div className="space-y-4">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <MessageSkeleton key={i} align={i % 2 === 0 ? 'left' : 'right'} />
+                      ))}
                     </div>
                   )}
 
                   <div className="space-y-4">
-                    {messages?.map((message) => {
-                      const isMyMessage = message.senderUserId === user?.userId;
-                      return (
-                        <div
-                          key={message.messageId}
-                          className={`flex flex-col ${isMyMessage ? 'items-end' : 'items-start'}`}
-                        >
+                    <AnimatePresence mode="popLayout">
+                      {messages?.map((message) => {
+                        const isMyMessage = message.senderUserId === user?.userId;
+                        return (
+                          <motion.div
+                            key={message.messageId}
+                            className={`flex flex-col ${isMyMessage ? 'items-end' : 'items-start'}`}
+                            variants={messageEnter}
+                            initial="hidden"
+                            animate="visible"
+                            exit="hidden"
+                            layout
+                          >
                           <div
                             className={`max-w-[70%] rounded-2xl px-4 py-3 ${
                               isMyMessage
@@ -269,9 +293,10 @@ export const MessagesPage = () => {
                               )}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
                     <div ref={messagesEndRef} />
                   </div>
                 </CardContent>
