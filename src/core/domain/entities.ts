@@ -51,13 +51,6 @@ export interface TalentCapabilities {
   otherCapabilities: string | null;
 }
 
-// Social Link
-export interface SocialLink {
-  platform: string;
-  url: string;
-  followerCount: number | null;
-}
-
 // Talent Profile
 export interface TalentProfile {
   talentProfileId: string;
@@ -72,9 +65,10 @@ export interface TalentProfile {
   primaryTags: string[];
   secondaryTags: string[];
   capabilities: TalentCapabilities;
-  socialLinks: SocialLink[];
   verificationStatus: VerificationStatus;
   profileImageUrl: string | null;
+  introductionVideoUrl: string | null;
+  introductionVideoDuration: number | null;
   createdAt: string;
   updatedAt: string;
   // Rating and statistics

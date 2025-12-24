@@ -8,7 +8,7 @@ import {
   useUpdateTalentLanguages,
   useUpdateTalentTags,
   useUpdateTalentCapabilities,
-  useUpdateTalentSocialLinks,
+  useUpdateIntroductionVideo,
   useUpdateProfileImage,
   useAvailableTags,
 } from '../../core/application/useTalents';
@@ -45,13 +45,6 @@ interface TagsFormData {
   selectedTags: string[]; // Array of selected tag names
 }
 
-interface SocialLinksFormData {
-  instagramUrl: string;
-  twitterUrl: string;
-  linkedinUrl: string;
-  websiteUrl: string;
-}
-
 interface LocationFormData {
   city: string;
   country: string;
@@ -70,7 +63,7 @@ export const ProfilePage = () => {
   const updateLanguages = useUpdateTalentLanguages();
   const updateTags = useUpdateTalentTags();
   const updateCapabilities = useUpdateTalentCapabilities();
-  const updateSocialLinks = useUpdateTalentSocialLinks();
+  const updateIntroductionVideo = useUpdateIntroductionVideo();
   const updateProfileImage = useUpdateProfileImage();
   const uploadImage = useUploadImage();
   const { showSuccess, showError } = useToast();
@@ -89,6 +82,12 @@ export const ProfilePage = () => {
   const removeFromPortfolio = useRemoveFromPortfolio();
   const [selectedMediaItem, setSelectedMediaItem] = useState<PortfolioItemWithMedia | null>(null);
   const [showMediaUpload, setShowMediaUpload] = useState(false);
+
+  // Introduction video state
+  const [showIntroVideoUpload, setShowIntroVideoUpload] = useState(false);
+  const [introVideoFile, setIntroVideoFile] = useState<File | null>(null);
+  const [introVideoDuration, setIntroVideoDuration] = useState<number | null>(null);
+  const introVideoInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register: registerCreate,
@@ -211,11 +210,6 @@ export const ProfilePage = () => {
   } = useForm<TagsFormData>();
   const { register: registerCapabilities, handleSubmit: handleSubmitCapabilities } =
     useForm<UpdateCapabilitiesRequest>();
-  const {
-    register: registerSocial,
-    handleSubmit: handleSubmitSocial,
-    reset: resetSocial,
-  } = useForm<SocialLinksFormData>();
 
   const onCreateProfile = (data: CreateTalentProfileRequest) => {
     console.log('Create profile called with data:', data);
@@ -330,33 +324,82 @@ export const ProfilePage = () => {
     });
   };
 
-  const onUpdateSocialLinks = (data: SocialLinksFormData) => {
-    // Transform form data to SocialLink array
-    const socialLinks = [];
+  // Introduction video handlers
+  const handleIntroVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    if (data.instagramUrl) {
-      socialLinks.push({ platform: 'Instagram', url: data.instagramUrl, followerCount: null });
-    }
-    if (data.twitterUrl) {
-      socialLinks.push({ platform: 'Twitter', url: data.twitterUrl, followerCount: null });
-    }
-    if (data.linkedinUrl) {
-      socialLinks.push({ platform: 'LinkedIn', url: data.linkedinUrl, followerCount: null });
-    }
-    if (data.websiteUrl) {
-      socialLinks.push({ platform: 'Website', url: data.websiteUrl, followerCount: null });
+    // Validate file type
+    if (!file.type.startsWith('video/')) {
+      showError('Please select a video file');
+      return;
     }
 
-    updateSocialLinks.mutate(
-      { socialLinks },
-      {
-        onSuccess: () => {
-          setEditingSection(null);
-          showSuccess('Social links updated successfully!');
-        },
-        onError: () => showError('Failed to update social links'),
+    // Create video element to check duration
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src);
+      const duration = Math.round(video.duration);
+
+      if (duration > 30) {
+        showError('Introduction video must be 30 seconds or less');
+        return;
       }
-    );
+
+      setIntroVideoFile(file);
+      setIntroVideoDuration(duration);
+    };
+
+    video.onerror = () => {
+      showError('Failed to load video file');
+    };
+
+    video.src = URL.createObjectURL(file);
+  };
+
+  const handleIntroVideoUpload = async () => {
+    if (!introVideoFile || !introVideoDuration) {
+      showError('Please select a video first');
+      return;
+    }
+
+    try {
+      // Upload the video file
+      const uploadResult = await uploadImage.mutateAsync(introVideoFile);
+
+      // Update the introduction video
+      await updateIntroductionVideo.mutateAsync({
+        introductionVideoUrl: uploadResult.url,
+        introductionVideoDuration: introVideoDuration,
+      });
+
+      setShowIntroVideoUpload(false);
+      setIntroVideoFile(null);
+      setIntroVideoDuration(null);
+      showSuccess('Introduction video uploaded successfully!');
+    } catch (error: unknown) {
+      console.error('Error uploading introduction video:', error);
+      showError(`Failed to upload video: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleRemoveIntroVideo = async () => {
+    if (!confirm('Are you sure you want to remove your introduction video?')) {
+      return;
+    }
+
+    try {
+      await updateIntroductionVideo.mutateAsync({
+        introductionVideoUrl: '',
+        introductionVideoDuration: 0,
+      });
+      showSuccess('Introduction video removed successfully!');
+    } catch (error: unknown) {
+      console.error('Error removing introduction video:', error);
+      showError(`Failed to remove video: ${error.message || 'Unknown error'}`);
+    }
   };
 
   // Portfolio handlers
@@ -1563,7 +1606,7 @@ export const ProfilePage = () => {
           </CardContent>
         </Card>
 
-        {/* Social Links Section */}
+        {/* Introduction Video Section */}
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1578,132 +1621,149 @@ export const ProfilePage = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                   />
                 </svg>
-                Social Links
+                Introduction Video
+                <span className="text-xs font-normal text-slate-500">(Max 30 seconds)</span>
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (editingSection === 'social') {
-                    setEditingSection(null);
-                  } else {
-                    const instagram = profile.socialLinks?.find(
-                      (sl) => sl.platform === 'Instagram'
-                    );
-                    const twitter = profile.socialLinks?.find((sl) => sl.platform === 'Twitter');
-                    const linkedin = profile.socialLinks?.find((sl) => sl.platform === 'LinkedIn');
-                    const website = profile.socialLinks?.find((sl) => sl.platform === 'Website');
-
-                    resetSocial({
-                      instagramUrl: instagram?.url || '',
-                      twitterUrl: twitter?.url || '',
-                      linkedinUrl: linkedin?.url || '',
-                      websiteUrl: website?.url || '',
-                    });
-                    setEditingSection('social');
-                  }
-                }}
-                className="text-blue-600 border-blue-600 hover:bg-blue-50"
-              >
-                {editingSection === 'social' ? 'Cancel' : 'Edit'}
-              </Button>
+              {profile.introductionVideoUrl ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRemoveIntroVideo}
+                  className="text-red-600 border-red-600 hover:bg-red-50"
+                >
+                  Remove Video
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowIntroVideoUpload(!showIntroVideoUpload)}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
+                  {showIntroVideoUpload ? 'Cancel' : 'Upload Video'}
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
-            {editingSection === 'social' ? (
-              <form onSubmit={handleSubmitSocial(onUpdateSocialLinks)} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">Instagram</label>
-                    <Input
-                      {...registerSocial('instagramUrl')}
-                      placeholder="https://instagram.com/..."
-                      className="mt-1 h-10"
+            {showIntroVideoUpload ? (
+              <div className="space-y-4">
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center">
+                  <input
+                    ref={introVideoInputRef}
+                    type="file"
+                    accept="video/*"
+                    onChange={handleIntroVideoSelect}
+                    className="hidden"
+                  />
+                  <svg
+                    className="mx-auto h-12 w-12 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                     />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">Twitter</label>
-                    <Input
-                      {...registerSocial('twitterUrl')}
-                      placeholder="https://twitter.com/..."
-                      className="mt-1 h-10"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">LinkedIn</label>
-                    <Input
-                      {...registerSocial('linkedinUrl')}
-                      placeholder="https://linkedin.com/..."
-                      className="mt-1 h-10"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">Website</label>
-                    <Input
-                      {...registerSocial('websiteUrl')}
-                      placeholder="https://..."
-                      className="mt-1 h-10"
-                    />
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  disabled={updateSocialLinks.isPending}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                >
-                  {updateSocialLinks.isPending ? 'Saving...' : 'Save'}
-                </Button>
-              </form>
-            ) : (
-              <div className="space-y-2">
-                {profile.socialLinks && profile.socialLinks.length > 0 ? (
-                  profile.socialLinks.map((link) => (
-                    <a
-                      key={link.platform}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+                  </svg>
+                  <div className="mt-4">
+                    <Button
+                      type="button"
+                      onClick={() => introVideoInputRef.current?.click()}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     >
-                      {link.platform === 'Instagram' && (
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                        </svg>
-                      )}
-                      {link.platform === 'Twitter' && (
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
-                        </svg>
-                      )}
-                      {link.platform === 'LinkedIn' && (
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                        </svg>
-                      )}
-                      {link.platform === 'Website' && (
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-                          />
-                        </svg>
-                      )}
-                      {link.platform}
-                    </a>
-                  ))
-                ) : (
-                  <p className="text-slate-500">No social links added</p>
+                      Select Video File
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600">
+                    MP4, MOV, or any video format • Maximum 30 seconds
+                  </p>
+                  {introVideoFile && (
+                    <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                      <p className="text-sm font-semibold text-blue-900">{introVideoFile.name}</p>
+                      <p className="text-sm text-blue-700">
+                        Duration: {introVideoDuration} seconds
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {introVideoFile && (
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIntroVideoFile(null);
+                        setIntroVideoDuration(null);
+                        setShowIntroVideoUpload(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleIntroVideoUpload}
+                      disabled={updateIntroductionVideo.isPending || uploadImage.isPending}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    >
+                      {updateIntroductionVideo.isPending || uploadImage.isPending
+                        ? 'Uploading...'
+                        : 'Upload Video'}
+                    </Button>
+                  </div>
                 )}
+              </div>
+            ) : profile.introductionVideoUrl ? (
+              <div className="space-y-4">
+                <div className="aspect-video w-full bg-slate-900 rounded-lg overflow-hidden">
+                  <video
+                    src={profile.introductionVideoUrl}
+                    controls
+                    className="w-full h-full"
+                    preload="metadata"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>Duration: {profile.introductionVideoDuration} seconds</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-gradient-to-br from-slate-50 to-blue-50 rounded-lg border border-slate-200">
+                <svg
+                  className="mx-auto h-12 w-12 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+                <p className="mt-4 text-sm font-semibold text-slate-700">
+                  No introduction video yet
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Upload a 30-second video to introduce yourself to potential clients
+                </p>
               </div>
             )}
           </CardContent>

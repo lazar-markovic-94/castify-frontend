@@ -9,7 +9,7 @@ import {
   UpdateLanguagesRequest,
   UpdateTagsRequest,
   UpdateCapabilitiesRequest,
-  UpdateSocialLinksRequest,
+  UpdateIntroductionVideoRequest,
   TalentSearchRequest,
   PagedResult,
   AvailableTagsResponse,
@@ -75,8 +75,8 @@ class TalentRepository {
     return response.data;
   }
 
-  async updateSocialLinks(request: UpdateSocialLinksRequest): Promise<TalentProfile> {
-    const response = await apiClient.put<TalentProfile>('/api/talents/social-links', request);
+  async updateIntroductionVideo(request: UpdateIntroductionVideoRequest): Promise<TalentProfile> {
+    const response = await apiClient.put<TalentProfile>('/api/talents/introduction-video', request);
     return response.data;
   }
 
