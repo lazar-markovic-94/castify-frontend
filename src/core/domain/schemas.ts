@@ -56,12 +56,6 @@ export const TalentCapabilitiesSchema = z.object({
   otherCapabilities: z.string().nullable(),
 });
 
-export const SocialLinkSchema = z.object({
-  platform: z.string(),
-  url: z.string().url(),
-  followerCount: z.number().nullable(),
-});
-
 export const TalentProfileSchema = z.object({
   talentProfileId: z.string(),
   userId: z.string(),
@@ -75,9 +69,10 @@ export const TalentProfileSchema = z.object({
   primaryTags: z.array(z.string()),
   secondaryTags: z.array(z.string()),
   capabilities: TalentCapabilitiesSchema,
-  socialLinks: z.array(SocialLinkSchema),
   verificationStatus: z.nativeEnum(VerificationStatus),
   profileImageUrl: z.string().nullable(),
+  introductionVideoUrl: z.string().nullable(),
+  introductionVideoDuration: z.number().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   tier: z.nativeEnum(TalentTier).nullable(),

@@ -10,7 +10,7 @@ import {
   UpdateLanguagesRequest,
   UpdateTagsRequest,
   UpdateCapabilitiesRequest,
-  UpdateSocialLinksRequest,
+  UpdateIntroductionVideoRequest,
   TalentSearchRequest,
 } from '../domain/dtos';
 
@@ -135,11 +135,12 @@ export const useUpdateTalentCapabilities = () => {
   });
 };
 
-export const useUpdateTalentSocialLinks = () => {
+export const useUpdateIntroductionVideo = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: UpdateSocialLinksRequest) => talentRepository.updateSocialLinks(request),
+    mutationFn: (request: UpdateIntroductionVideoRequest) =>
+      talentRepository.updateIntroductionVideo(request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
     },

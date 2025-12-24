@@ -1,5 +1,5 @@
 import { UserRole, VerificationStatus, OrgType, TalentTier, LocationMode } from './enums';
-import { PrimaryLocation, GeoArea, SocialLink } from './entities';
+import { PrimaryLocation, GeoArea } from './entities';
 
 // Auth DTOs
 export interface RegisterRequest {
@@ -66,8 +66,9 @@ export interface UpdateCapabilitiesRequest {
   otherCapabilities?: string;
 }
 
-export interface UpdateSocialLinksRequest {
-  socialLinks: SocialLink[];
+export interface UpdateIntroductionVideoRequest {
+  introductionVideoUrl: string;
+  introductionVideoDuration: number;
 }
 
 export interface TalentSearchRequest {
