@@ -61,7 +61,9 @@ export const MyProjectsPage = () => {
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <h3 className="text-xl font-bold mb-2">{collaboration.title}</h3>
-            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(collaboration.status)}`}>
+            <span
+              className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(collaboration.status)}`}
+            >
               {collaboration.status.replace('_', ' ')}
             </span>
           </div>
@@ -197,3 +199,4 @@ export const MyProjectsPage = () => {
     </MainLayout>
   );
 };
+export default MyProjectsPage;

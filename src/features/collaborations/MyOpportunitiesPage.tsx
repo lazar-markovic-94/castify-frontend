@@ -232,3 +232,4 @@ export const MyOpportunitiesPage = () => {
     </MainLayout>
   );
 };
+export default MyOpportunitiesPage;

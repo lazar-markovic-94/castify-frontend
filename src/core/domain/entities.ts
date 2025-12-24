@@ -1,12 +1,21 @@
-import { UserRole, LocationMode, VerificationStatus, OrgType, MediaType, ContentType, TalentTier, CollaborationStatus } from './enums';
+import {
+  UserRole,
+  LocationMode,
+  VerificationStatus,
+  OrgType,
+  MediaType,
+  ContentType,
+  TalentTier,
+  CollaborationStatus,
+} from './enums';
 
 // Auth Entities
 export interface User {
   userId: string;
   email: string;
   role: UserRole;
-  phone: string | null;
-  isActive: boolean;
+  phone?: string | null;
+  isActive?: boolean;
 }
 
 export interface AuthCredentials {
@@ -60,6 +69,8 @@ export interface TalentProfile {
   geoAreas: GeoArea[];
   languages: string[];
   tags: string[];
+  primaryTags: string[];
+  secondaryTags: string[];
   capabilities: TalentCapabilities;
   socialLinks: SocialLink[];
   verificationStatus: VerificationStatus;

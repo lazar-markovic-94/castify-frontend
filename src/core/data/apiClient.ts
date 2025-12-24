@@ -1,17 +1,25 @@
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { storageService } from './storage';
+import { env } from '../../config/env';
+import { logger } from '../../shared/utils/logger';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+/**
+ * Custom event for unauthorized access
+ * Allows components to handle 401 errors without hard redirects
+ */
+export const UNAUTHORIZED_EVENT = 'api:unauthorized';
 
 class ApiClient {
   private client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
-      baseURL: BASE_URL,
+      baseURL: env.VITE_API_BASE_URL,
       headers: {
         'Content-Type': 'application/json',
       },
+      timeout: 30000, // 30 second timeout
     });
 
     this.setupInterceptors();
@@ -23,12 +31,9 @@ class ApiClient {
       (config: InternalAxiosRequestConfig) => {
         const token = storageService.getToken();
 
-        console.log('🔑 Token from storage:', token ? `${token.substring(0, 20)}...` : 'NULL');
-
+        // Add token to request if available
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
-        } else if (!token) {
-          console.error('❌ NO TOKEN FOUND IN STORAGE!');
         }
 
         // If sending FormData, remove Content-Type header to let axios set it automatically
@@ -36,17 +41,17 @@ class ApiClient {
           delete config.headers['Content-Type'];
         }
 
-        // Log request details
-        console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
-          data: config.data,
-          hasAuthHeader: !!config.headers?.Authorization,
-          authHeaderPreview: config.headers?.Authorization?.substring(0, 30) + '...',
-        });
+        // Log request in development (without sensitive data)
+        logger.api(
+          config.method || 'unknown',
+          config.url || 'unknown',
+          config.data instanceof FormData ? '[FormData]' : config.data
+        );
 
         return config;
       },
       (error) => {
-        console.error('[API Request Error]', error);
+        logger.error('[API Request Error]', error.message);
         return Promise.reject(error);
       }
     );
@@ -54,25 +59,63 @@ class ApiClient {
     // Response interceptor for handling errors
     this.client.interceptors.response.use(
       (response) => {
-        console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`, response.data);
+        // Log successful responses in development
+        logger.log(
+          `[API Response] ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`
+        );
         return response;
       },
-      (error) => {
-        console.error(`[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
-        console.error('❌ Status:', error.response?.status);
-        console.error('❌ Status Text:', error.response?.statusText);
-        console.error('❌ Response Data:', JSON.stringify(error.response?.data, null, 2));
-        console.error('❌ Error Message:', error.message);
+      (error: AxiosError) => {
+        const status = error.response?.status;
+        const method = error.config?.method?.toUpperCase();
+        const url = error.config?.url;
 
-        if (error.response?.status === 401) {
-          // Clear auth data on 401
+        // Log error without exposing sensitive data
+        logger.error(`[API Error] ${method} ${url}`, {
+          status,
+          statusText: error.response?.statusText,
+          message: error.message,
+        });
+
+        // Handle specific error cases
+        if (status === 401) {
+          // Clear auth data on unauthorized
           storageService.clearAuth();
-          // Optionally redirect to login
-          window.location.href = '/login';
+
+          // Dispatch custom event instead of hard redirect
+          // This allows components to handle the redirect gracefully
+          window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
+
+          // Only redirect if not already on auth pages
+          const currentPath = window.location.pathname;
+          if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
+            // Use a small delay to allow event handlers to complete
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 100);
+          }
         }
-        return Promise.reject(error);
+
+        // Enhance error message for better debugging
+        const enhancedError = {
+          ...error,
+          message: this.getErrorMessage(error),
+        };
+
+        return Promise.reject(enhancedError);
       }
     );
+  }
+
+  /**
+   * Extract user-friendly error message from API error
+   */
+  private getErrorMessage(error: AxiosError): string {
+    if (error.response?.data && typeof error.response.data === 'object') {
+      const data = error.response.data as any;
+      return data.message || data.error || error.message;
+    }
+    return error.message;
   }
 
   get instance(): AxiosInstance {
@@ -85,8 +128,9 @@ export const apiClient = new ApiClient().instance;
 
 // Public API client (no authentication required)
 export const publicApiClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: env.VITE_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000,
 });

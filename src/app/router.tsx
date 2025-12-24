@@ -1,19 +1,30 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthGuard } from './guards/AuthGuard';
 import { RoleGuard } from './guards/RoleGuard';
-import { LoginPage } from '../features/auth/LoginPage';
-import { RegisterPage } from '../features/auth/RegisterPage';
-import { LandingPage } from '../features/landing/LandingPage';
-import { TalentsListPage } from '../features/talents/TalentsListPage';
-import { TalentDetailPage } from '../features/talents/TalentDetailPage';
-import { ProfilePage } from '../features/profile/ProfilePage';
-import { ClientOrgPage } from '../features/clientOrg/ClientOrgPage';
-import { MessagesPage } from '../features/messaging/MessagesPage';
-import { MyProjectsPage } from '../features/collaborations/MyProjectsPage';
-import { MyOpportunitiesPage } from '../features/collaborations/MyOpportunitiesPage';
-import { CollaborationDetailPage } from '../features/collaborations/CollaborationDetailPage';
 import { UserRole } from '../core/domain/enums';
 import { useCurrentUser } from '../core/application/useAuth';
+import { LoadingFallback } from '../shared/components/LoadingFallback';
+
+// Lazy load all route components for code splitting
+// Auth pages - loaded immediately as they're often the first pages users see
+import { LoginPage } from '../features/auth/LoginPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
+
+// Landing page - keep eager loading for fast initial render
+import { LandingPage } from '../features/landing/LandingPage';
+
+// Lazy load all other pages
+const TalentsListPage = lazy(() => import('../features/talents/TalentsListPage'));
+const TalentDetailPage = lazy(() => import('../features/talents/TalentDetailPage'));
+const ProfilePage = lazy(() => import('../features/profile/ProfilePage'));
+const ClientOrgPage = lazy(() => import('../features/clientOrg/ClientOrgPage'));
+const MessagesPage = lazy(() => import('../features/messaging/MessagesPage'));
+const MyProjectsPage = lazy(() => import('../features/collaborations/MyProjectsPage'));
+const MyOpportunitiesPage = lazy(() => import('../features/collaborations/MyOpportunitiesPage'));
+const CollaborationDetailPage = lazy(
+  () => import('../features/collaborations/CollaborationDetailPage')
+);
 
 const HomePage = () => {
   const { data: user, isLoading } = useCurrentUser();
@@ -48,82 +59,83 @@ const HomePage = () => {
 export const AppRouter = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
-        {/* Home page - shows landing page for guests, redirects authenticated users */}
-        <Route path="/" element={<HomePage />} />
+          {/* Home page - shows landing page for guests, redirects authenticated users */}
+          <Route path="/" element={<HomePage />} />
 
-        {/* Public talent browsing routes - no auth required */}
-        <Route path="/talents" element={<TalentsListPage />} />
-        <Route path="/talents/:id" element={<TalentDetailPage />} />
+          {/* Public talent browsing routes - no auth required */}
+          <Route path="/talents" element={<TalentsListPage />} />
+          <Route path="/talents/:id" element={<TalentDetailPage />} />
 
-        {/* Client-only routes */}
+          {/* Client-only routes */}
+          <Route
+            path="/client/organization"
+            element={
+              <AuthGuard>
+                <RoleGuard allowedRoles={[UserRole.CLIENT]}>
+                  <ClientOrgPage />
+                </RoleGuard>
+              </AuthGuard>
+            }
+          />
 
-        <Route
-          path="/client/organization"
-          element={
-            <AuthGuard>
-              <RoleGuard allowedRoles={[UserRole.CLIENT]}>
-                <ClientOrgPage />
-              </RoleGuard>
-            </AuthGuard>
-          }
-        />
+          <Route
+            path="/projects"
+            element={
+              <AuthGuard>
+                <RoleGuard allowedRoles={[UserRole.CLIENT]}>
+                  <MyProjectsPage />
+                </RoleGuard>
+              </AuthGuard>
+            }
+          />
 
-        <Route
-          path="/projects"
-          element={
-            <AuthGuard>
-              <RoleGuard allowedRoles={[UserRole.CLIENT]}>
-                <MyProjectsPage />
-              </RoleGuard>
-            </AuthGuard>
-          }
-        />
+          {/* Talent-only routes */}
+          <Route
+            path="/opportunities"
+            element={
+              <AuthGuard>
+                <RoleGuard allowedRoles={[UserRole.TALENT]}>
+                  <MyOpportunitiesPage />
+                </RoleGuard>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <AuthGuard>
+                <RoleGuard allowedRoles={[UserRole.TALENT]}>
+                  <ProfilePage />
+                </RoleGuard>
+              </AuthGuard>
+            }
+          />
 
-        {/* Talent-only routes */}
-        <Route
-          path="/opportunities"
-          element={
-            <AuthGuard>
-              <RoleGuard allowedRoles={[UserRole.TALENT]}>
-                <MyOpportunitiesPage />
-              </RoleGuard>
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <AuthGuard>
-              <RoleGuard allowedRoles={[UserRole.TALENT]}>
-                <ProfilePage />
-              </RoleGuard>
-            </AuthGuard>
-          }
-        />
+          {/* Shared routes */}
+          <Route
+            path="/messages"
+            element={
+              <AuthGuard>
+                <MessagesPage />
+              </AuthGuard>
+            }
+          />
 
-        {/* Shared routes */}
-        <Route
-          path="/messages"
-          element={
-            <AuthGuard>
-              <MessagesPage />
-            </AuthGuard>
-          }
-        />
-
-        <Route
-          path="/collaborations/:id"
-          element={
-            <AuthGuard>
-              <CollaborationDetailPage />
-            </AuthGuard>
-          }
-        />
-      </Routes>
+          <Route
+            path="/collaborations/:id"
+            element={
+              <AuthGuard>
+                <CollaborationDetailPage />
+              </AuthGuard>
+            }
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };
