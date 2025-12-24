@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useConversations, useMessages, useSendMessage, useMarkMessageAsRead } from '../../core/application/useMessaging';
+import {
+  useConversations,
+  useMessages,
+  useSendMessage,
+  useMarkMessageAsRead,
+} from '../../core/application/useMessaging';
 import { MainLayout } from '../../app/layouts/MainLayout';
 import { Card, CardContent } from '../../shared/components/ui/Card';
 import { Button } from '../../shared/components/ui/Button';
@@ -11,20 +16,23 @@ import { formatRelativeTime } from '../../shared/lib/utils';
 import { useTalentProfileByUserId } from '../../core/application/useTalents';
 import { useClientOrgByUserId } from '../../core/application/useClientOrg';
 import { MessageSkeleton, ConversationSkeleton } from '../../shared/components/ui/SkeletonLoader';
-import { messageEnter, listItem } from '../../shared/lib/animations';
+import { messageEnter } from '../../shared/lib/animations';
 import { useToast } from '../../shared/contexts/ToastContext';
 
 // Component to fetch and display participant name
-const ParticipantName = ({ conversation, currentUser }: { conversation: any; currentUser: any }) => {
+import { Conversation, User } from '../../core/domain/entities';
+const ParticipantName = ({
+  conversation,
+  currentUser,
+}: {
+  conversation: Conversation;
+  currentUser: User;
+}) => {
   const isTalent = currentUser.userId === conversation.talentUserId;
   const otherUserId = isTalent ? conversation.clientUserId : conversation.talentUserId;
 
-  const { data: talentProfile } = useTalentProfileByUserId(
-    isTalent ? undefined : otherUserId
-  );
-  const { data: clientOrg } = useClientOrgByUserId(
-    isTalent ? otherUserId : undefined
-  );
+  const { data: talentProfile } = useTalentProfileByUserId(isTalent ? undefined : otherUserId);
+  const { data: clientOrg } = useClientOrgByUserId(isTalent ? otherUserId : undefined);
 
   if (isTalent && clientOrg) {
     return <>{clientOrg.orgName}</>;
@@ -42,7 +50,8 @@ export const MessagesPage = () => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission>('default');
   const { showError } = useToast();
 
   const { data: user } = useCurrentUser();
@@ -56,9 +65,11 @@ export const MessagesPage = () => {
   // Request notification permission
   useEffect(() => {
     if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
+      const currentPermission = Notification.permission;
+
+      setNotificationPermission(currentPermission);
+      if (currentPermission === 'default') {
+        Notification.requestPermission().then((permission) => {
           setNotificationPermission(permission);
         });
       }
@@ -68,10 +79,10 @@ export const MessagesPage = () => {
   // Auto-select conversation from URL query parameter
   useEffect(() => {
     const conversationId = searchParams.get('conversationId');
-    if (conversationId) {
+    if (conversationId && conversationId !== selectedConversationId) {
       setSelectedConversationId(conversationId);
     }
-  }, [searchParams]);
+  }, [searchParams, selectedConversationId]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -82,30 +93,28 @@ export const MessagesPage = () => {
   useEffect(() => {
     if (!messages || messages.length === 0 || !user || !selectedConversationId) return;
 
-    const unreadMessages = messages.filter(m =>
-      !m.isRead &&
-      m.senderUserId !== user.userId &&
-      !m.messageId.startsWith('temp-') // Skip temporary optimistic messages
+    const unreadMessages = messages.filter(
+      (m) => !m.isRead && m.senderUserId !== user.userId && !m.messageId.startsWith('temp-') // Skip temporary optimistic messages
     );
 
     if (unreadMessages.length === 0) return;
 
     // Mark all unread messages as read (silently, don't trigger revalidation immediately)
-    unreadMessages.forEach(message => {
+    unreadMessages.forEach((message) => {
       markAsRead.mutate(message.messageId, {
         onSuccess: () => {
           // Success - message marked as read
         },
         onError: (error) => {
           console.error('Failed to mark message as read:', error);
-        }
+        },
       });
     });
 
     // Show notification for the last unread message if allowed
     if (notificationPermission === 'granted') {
       const lastMessage = unreadMessages[unreadMessages.length - 1];
-      const conversation = conversations?.find(c => c.conversationId === selectedConversationId);
+      const conversation = conversations?.find((c) => c.conversationId === selectedConversationId);
 
       // Use simple role-based name for notifications since we can't use hooks here
       const isTalent = user.userId === conversation?.talentUserId;
@@ -117,6 +126,7 @@ export const MessagesPage = () => {
         tag: lastMessage.messageId,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversationId, messages?.length]);
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -131,8 +141,10 @@ export const MessagesPage = () => {
         onSuccess: () => {
           setMessageText('');
         },
-        onError: (error: any) => {
-          const errorMessage = error.response?.data?.message || error.message || 'Failed to send message';
+        onError: (error: unknown) => {
+          const err = error as { response?: { data?: { message?: string } }; message?: string };
+          const errorMessage =
+            err.response?.data?.message || err.message || 'Failed to send message';
           showError(`Message failed to send: ${errorMessage}. Please try again.`);
           console.error('Send message error:', error);
         },
@@ -145,7 +157,7 @@ export const MessagesPage = () => {
       // Would need to track unread per conversation - for now return 0
       return 0;
     }
-    return messages.filter(m => !m.isRead && m.senderUserId !== user?.userId).length;
+    return messages.filter((m) => !m.isRead && m.senderUserId !== user?.userId).length;
   };
 
   return (
@@ -156,8 +168,18 @@ export const MessagesPage = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                  <svg
+                    className="w-6 h-6 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"
+                    />
                   </svg>
                   Messages
                 </h2>
@@ -178,8 +200,18 @@ export const MessagesPage = () => {
 
               {conversations && conversations.length === 0 && (
                 <div className="text-center py-12">
-                  <svg className="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  <svg
+                    className="w-12 h-12 text-slate-300 mx-auto mb-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
                   </svg>
                   <p className="text-sm text-slate-500">No conversations yet</p>
                   <p className="text-xs text-slate-400 mt-1">Start browsing talents to connect</p>
@@ -202,13 +234,27 @@ export const MessagesPage = () => {
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <div className={`text-sm font-semibold flex items-center gap-2 ${selectedConversationId === conv.conversationId ? 'text-white' : 'text-slate-900'}`}>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          <div
+                            className={`text-sm font-semibold flex items-center gap-2 ${selectedConversationId === conv.conversationId ? 'text-white' : 'text-slate-900'}`}
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
                             </svg>
                             {user && <ParticipantName conversation={conv} currentUser={user} />}
                           </div>
-                          <div className={`text-xs mt-1 ${selectedConversationId === conv.conversationId ? 'text-white/80' : 'text-slate-500'}`}>
+                          <div
+                            className={`text-xs mt-1 ${selectedConversationId === conv.conversationId ? 'text-white/80' : 'text-slate-500'}`}
+                          >
                             {formatRelativeTime(conv.lastMessageAt)}
                           </div>
                         </div>
@@ -230,10 +276,22 @@ export const MessagesPage = () => {
           <Card className="h-full flex flex-col bg-white/80 backdrop-blur-sm border-0 shadow-lg">
             {!selectedConversationId ? (
               <div className="flex-1 flex flex-col items-center justify-center p-12">
-                <svg className="w-24 h-24 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                <svg
+                  className="w-24 h-24 text-slate-300 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
                 </svg>
-                <p className="text-slate-600 text-lg font-medium">Select a conversation to start messaging</p>
+                <p className="text-slate-600 text-lg font-medium">
+                  Select a conversation to start messaging
+                </p>
                 <p className="text-slate-400 text-sm mt-1">Your messages will appear here</p>
               </div>
             ) : (
@@ -261,38 +319,58 @@ export const MessagesPage = () => {
                             exit="hidden"
                             layout
                           >
-                          <div
-                            className={`max-w-[70%] rounded-2xl px-4 py-3 ${
-                              isMyMessage
-                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                                : 'bg-slate-100 text-slate-900'
-                            }`}
-                          >
-                            <p className="text-sm">{message.content}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <p
-                                className={`text-xs ${
-                                  isMyMessage ? 'text-white/70' : 'text-slate-500'
-                                }`}
-                              >
-                                {formatRelativeTime(message.sentAt)}
-                              </p>
-                              {isMyMessage && (
-                                <span className="text-xs">
-                                  {message.isRead ? (
-                                    <svg className="w-4 h-4 text-white/70" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                      <path fillRule="evenodd" d="M10.293 12.707a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414l-6 6a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  ) : (
-                                    <svg className="w-4 h-4 text-white/50" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  )}
-                                </span>
-                              )}
+                            <div
+                              className={`max-w-[70%] rounded-2xl px-4 py-3 ${
+                                isMyMessage
+                                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                                  : 'bg-slate-100 text-slate-900'
+                              }`}
+                            >
+                              <p className="text-sm">{message.content}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <p
+                                  className={`text-xs ${
+                                    isMyMessage ? 'text-white/70' : 'text-slate-500'
+                                  }`}
+                                >
+                                  {formatRelativeTime(message.sentAt)}
+                                </p>
+                                {isMyMessage && (
+                                  <span className="text-xs">
+                                    {message.isRead ? (
+                                      <svg
+                                        className="w-4 h-4 text-white/70"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
+                                        <path
+                                          fillRule="evenodd"
+                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                          clipRule="evenodd"
+                                        />
+                                        <path
+                                          fillRule="evenodd"
+                                          d="M10.293 12.707a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414l-6 6a1 1 0 01-1.414 0z"
+                                          clipRule="evenodd"
+                                        />
+                                      </svg>
+                                    ) : (
+                                      <svg
+                                        className="w-4 h-4 text-white/50"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                      >
+                                        <path
+                                          fillRule="evenodd"
+                                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                          clipRule="evenodd"
+                                        />
+                                      </svg>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
                           </motion.div>
                         );
                       })}
@@ -317,13 +395,34 @@ export const MessagesPage = () => {
                     >
                       {sendMessage.isPending ? (
                         <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                       ) : (
                         <span className="flex items-center gap-2">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                            />
                           </svg>
                           Send
                         </span>
@@ -339,3 +438,4 @@ export const MessagesPage = () => {
     </MainLayout>
   );
 };
+export default MessagesPage;

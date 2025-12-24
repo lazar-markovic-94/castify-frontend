@@ -10,6 +10,7 @@ import {
   useUpdateTalentCapabilities,
   useUpdateTalentSocialLinks,
   useUpdateProfileImage,
+  useAvailableTags,
 } from '../../core/application/useTalents';
 import { useUploadImage } from '../../core/application/useUpload';
 import { useToast } from '../../shared/contexts/ToastContext';
@@ -32,10 +33,8 @@ import { LocationMode } from '../../core/domain/enums';
 import {
   CreateTalentProfileRequest,
   UpdatePrimaryLocationRequest,
-  AddGeoAreaRequest,
   UpdateCapabilitiesRequest,
 } from '../../core/domain/dtos';
-import { GeoArea } from '../../core/domain/entities';
 
 // Form types that match the HTML form structure
 interface LanguagesFormData {
@@ -43,7 +42,7 @@ interface LanguagesFormData {
 }
 
 interface TagsFormData {
-  tags: string; // Comma-separated string in the form
+  selectedTags: string[]; // Array of selected tag names
 }
 
 interface SocialLinksFormData {
@@ -53,9 +52,17 @@ interface SocialLinksFormData {
   websiteUrl: string;
 }
 
+interface LocationFormData {
+  city: string;
+  country: string;
+  latitude: string;
+  longitude: string;
+}
+
 export const ProfilePage = () => {
   const { data: profile, isLoading, error } = useMyTalentProfile();
   const { data: statistics } = useTalentStatistics(profile?.talentProfileId);
+  const { data: availableTags } = useAvailableTags();
   const createProfile = useCreateTalentProfile();
   const updatePrimaryLocation = useUpdatePrimaryLocation();
   const addGeoArea = useAddGeoArea();
@@ -83,7 +90,11 @@ export const ProfilePage = () => {
   const [selectedMediaItem, setSelectedMediaItem] = useState<PortfolioItemWithMedia | null>(null);
   const [showMediaUpload, setShowMediaUpload] = useState(false);
 
-  const { register: registerCreate, handleSubmit: handleSubmitCreate, setValue: setCreateValue } = useForm<CreateTalentProfileRequest>({
+  const {
+    register: registerCreate,
+    handleSubmit: handleSubmitCreate,
+    setValue: setCreateValue,
+  } = useForm<CreateTalentProfileRequest>({
     defaultValues: {
       locationMode: LocationMode.SPECIFIC,
       primaryLocation: undefined,
@@ -174,42 +185,60 @@ export const ProfilePage = () => {
         await updateProfileImage.mutateAsync(imageUrl);
         showSuccess('Profile image updated successfully!');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading image:', error);
       showError(`Failed to upload image: ${error.message || 'Unknown error'}`);
       setProfileImagePreview(null);
     }
   };
 
-  const { register: registerLocation, handleSubmit: handleSubmitLocation, reset: resetLocation, setValue: setLocationValue } = useForm<any>();
+  const {
+    register: registerLocation,
+    handleSubmit: handleSubmitLocation,
+    reset: resetLocation,
+    setValue: setLocationValue,
+  } = useForm<LocationFormData>();
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
-  const { register: registerLanguages, handleSubmit: handleSubmitLanguages, reset: resetLanguages } = useForm<LanguagesFormData>();
-  const { register: registerTags, handleSubmit: handleSubmitTags, reset: resetTags } = useForm<TagsFormData>();
-  const { register: registerCapabilities, handleSubmit: handleSubmitCapabilities } = useForm<UpdateCapabilitiesRequest>();
-  const { register: registerSocial, handleSubmit: handleSubmitSocial, reset: resetSocial } = useForm<SocialLinksFormData>();
+  const {
+    register: registerLanguages,
+    handleSubmit: handleSubmitLanguages,
+    reset: resetLanguages,
+  } = useForm<LanguagesFormData>();
+  const {
+    register: registerTags,
+    handleSubmit: handleSubmitTags,
+    reset: resetTags,
+  } = useForm<TagsFormData>();
+  const { register: registerCapabilities, handleSubmit: handleSubmitCapabilities } =
+    useForm<UpdateCapabilitiesRequest>();
+  const {
+    register: registerSocial,
+    handleSubmit: handleSubmitSocial,
+    reset: resetSocial,
+  } = useForm<SocialLinksFormData>();
 
   const onCreateProfile = (data: CreateTalentProfileRequest) => {
     console.log('Create profile called with data:', data);
     createProfile.mutate(data, {
-      onError: (error: any) => {
+      onError: (error: unknown) => {
         console.error('Create profile error:', error);
         showError(`Failed to create profile: ${error.message || 'Unknown error'}`);
       },
       onSuccess: (profile) => {
         console.log('Profile created successfully:', profile);
         showSuccess('Profile created successfully! Welcome to Castify!');
-      }
+      },
     });
   };
 
-  const onUpdatePrimaryLocation = (data: any) => {
+  const onUpdatePrimaryLocation = (data: LocationFormData) => {
     const locationData: UpdatePrimaryLocationRequest = {
       primaryLocation: {
         city: data.city,
         country: data.country,
         latitude: Number(data.latitude),
         longitude: Number(data.longitude),
-      }
+      },
     };
 
     updatePrimaryLocation.mutate(locationData, {
@@ -239,7 +268,7 @@ export const ProfilePage = () => {
           setNewGeoAreaCountry('');
           showSuccess('Service area added successfully!');
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           showError(`Failed to add location: ${error.message || 'Unknown error'}`);
         },
       }
@@ -251,32 +280,44 @@ export const ProfilePage = () => {
       return;
     }
 
-    removeGeoArea.mutate({ city, country }, {
-      onSuccess: () => showSuccess('Service area removed successfully!'),
-      onError: () => showError('Failed to remove service area'),
-    });
+    removeGeoArea.mutate(
+      { city, country },
+      {
+        onSuccess: () => showSuccess('Service area removed successfully!'),
+        onError: () => showError('Failed to remove service area'),
+      }
+    );
   };
 
   const onUpdateLanguages = (data: LanguagesFormData) => {
-    const languages = data.languages.split(',').map((l: string) => l.trim()).filter(Boolean);
-    updateLanguages.mutate({ languages }, {
-      onSuccess: () => {
-        setEditingSection(null);
-        showSuccess('Languages updated successfully!');
-      },
-      onError: () => showError('Failed to update languages'),
-    });
+    const languages = data.languages
+      .split(',')
+      .map((l: string) => l.trim())
+      .filter(Boolean);
+    updateLanguages.mutate(
+      { languages },
+      {
+        onSuccess: () => {
+          setEditingSection(null);
+          showSuccess('Languages updated successfully!');
+        },
+        onError: () => showError('Failed to update languages'),
+      }
+    );
   };
 
   const onUpdateTags = (data: TagsFormData) => {
-    const tags = data.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
-    updateTags.mutate({ tags }, {
-      onSuccess: () => {
-        setEditingSection(null);
-        showSuccess('Tags updated successfully!');
-      },
-      onError: () => showError('Failed to update tags'),
-    });
+    const tags = data.selectedTags || [];
+    updateTags.mutate(
+      { tags },
+      {
+        onSuccess: () => {
+          setEditingSection(null);
+          showSuccess('Tags updated successfully!');
+        },
+        onError: () => showError('Failed to update tags'),
+      }
+    );
   };
 
   const onUpdateCapabilities = (data: UpdateCapabilitiesRequest) => {
@@ -306,13 +347,16 @@ export const ProfilePage = () => {
       socialLinks.push({ platform: 'Website', url: data.websiteUrl, followerCount: null });
     }
 
-    updateSocialLinks.mutate({ socialLinks }, {
-      onSuccess: () => {
-        setEditingSection(null);
-        showSuccess('Social links updated successfully!');
-      },
-      onError: () => showError('Failed to update social links'),
-    });
+    updateSocialLinks.mutate(
+      { socialLinks },
+      {
+        onSuccess: () => {
+          setEditingSection(null);
+          showSuccess('Social links updated successfully!');
+        },
+        onError: () => showError('Failed to update social links'),
+      }
+    );
   };
 
   // Portfolio handlers
@@ -328,7 +372,7 @@ export const ProfilePage = () => {
       });
       setShowMediaUpload(false);
       showSuccess('Media added to portfolio successfully!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading media:', error);
       showError(`Failed to upload media: ${error.message || 'Unknown error'}`);
     }
@@ -338,7 +382,7 @@ export const ProfilePage = () => {
     try {
       await removeFromPortfolio.mutateAsync(portfolioItemId);
       showSuccess('Portfolio item removed successfully!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error removing portfolio item:', error);
       showError(`Failed to remove item: ${error.message || 'Unknown error'}`);
     }
@@ -393,7 +437,12 @@ export const ProfilePage = () => {
           const data = await response.json();
 
           if (data.address) {
-            const city = data.address.city || data.address.town || data.address.village || data.address.county || '';
+            const city =
+              data.address.city ||
+              data.address.town ||
+              data.address.village ||
+              data.address.county ||
+              '';
             const country = data.address.country || '';
 
             setLocationValue('city', city);
@@ -436,23 +485,42 @@ export const ProfilePage = () => {
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
             <CardHeader className="text-center pb-6">
               <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg mb-3">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                <svg
+                  className="w-8 h-8 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
                 </svg>
               </div>
               <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 Create Your Talent Profile
               </CardTitle>
-              <p className="text-slate-600 mt-2">Let's set up your profile to get discovered by clients</p>
+              <p className="text-slate-600 mt-2">
+                Let's set up your profile to get discovered by clients
+              </p>
             </CardHeader>
             <CardContent>
-              <form onSubmit={(e) => {
-                console.log('Form submit event triggered');
-                handleSubmitCreate(onCreateProfile)(e);
-              }} className="space-y-5">
+              <form
+                onSubmit={(e) => {
+                  console.log('Form submit event triggered');
+                  handleSubmitCreate(onCreateProfile)(e);
+                }}
+                className="space-y-5"
+              >
                 <div>
                   <label className="text-sm font-semibold text-slate-700">Full Name</label>
-                  <Input {...registerCreate('fullName')} placeholder="John Doe" className="mt-1 h-11" />
+                  <Input
+                    {...registerCreate('fullName')}
+                    placeholder="John Doe"
+                    className="mt-1 h-11"
+                  />
                 </div>
 
                 <div>
@@ -473,17 +541,48 @@ export const ProfilePage = () => {
                   >
                     {isCapturingCreateLocation ? (
                       <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                         Detecting Location...
                       </>
                     ) : (
                       <>
-                        <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <svg
+                          className="w-4 h-4 mr-2 inline"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
                         </svg>
                         Use Current Location
                       </>
@@ -492,22 +591,39 @@ export const ProfilePage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input type="hidden" {...registerCreate('locationMode')} value={LocationMode.SPECIFIC} />
+                  <input
+                    type="hidden"
+                    {...registerCreate('locationMode')}
+                    value={LocationMode.SPECIFIC}
+                  />
                   <input type="hidden" {...registerCreate('primaryLocation.latitude')} />
                   <input type="hidden" {...registerCreate('primaryLocation.longitude')} />
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Primary City</label>
-                    <Input {...registerCreate('primaryLocation.city')} placeholder="Belgrade" className="mt-1 h-11" />
+                    <Input
+                      {...registerCreate('primaryLocation.city')}
+                      placeholder="Belgrade"
+                      className="mt-1 h-11"
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Country</label>
-                    <Input {...registerCreate('primaryLocation.country')} placeholder="Serbia" className="mt-1 h-11" />
+                    <Input
+                      {...registerCreate('primaryLocation.country')}
+                      placeholder="Serbia"
+                      className="mt-1 h-11"
+                    />
                   </div>
                 </div>
-                <p className="text-xs text-slate-500">Your primary city is where you're based. You'll be able to add additional service areas after creating your profile.</p>
+                <p className="text-xs text-slate-500">
+                  Your primary city is where you're based. You'll be able to add additional service
+                  areas after creating your profile.
+                </p>
 
                 <div>
-                  <label className="text-sm font-semibold text-slate-700 block mb-2">Profile Image</label>
+                  <label className="text-sm font-semibold text-slate-700 block mb-2">
+                    Profile Image
+                  </label>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -539,8 +655,18 @@ export const ProfilePage = () => {
                       </div>
                     ) : (
                       <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        <svg
+                          className="w-12 h-12 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
                         </svg>
                       </div>
                     )}
@@ -553,26 +679,58 @@ export const ProfilePage = () => {
                     >
                       {uploadImage.isPending ? (
                         <>
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Uploading...
                         </>
                       ) : (
                         <>
-                          <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          <svg
+                            className="w-4 h-4 mr-2 inline"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
                           </svg>
                           {profileImagePreview ? 'Change Image' : 'Upload Image'}
                         </>
                       )}
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">Max size: 5MB. Formats: JPG, PNG, GIF</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Max size: 5MB. Formats: JPG, PNG, GIF
+                  </p>
                 </div>
 
-                <Button type="submit" disabled={createProfile.isPending} className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg">
+                <Button
+                  type="submit"
+                  disabled={createProfile.isPending}
+                  className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg"
+                >
                   {createProfile.isPending ? 'Creating...' : 'Create Profile'}
                 </Button>
               </form>
@@ -605,7 +763,9 @@ export const ProfilePage = () => {
                     />
                   ) : (
                     <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl border-4 border-white shadow-xl flex items-center justify-center">
-                      <span className="text-5xl font-bold text-white">{profile.fullName.charAt(0)}</span>
+                      <span className="text-5xl font-bold text-white">
+                        {profile.fullName.charAt(0)}
+                      </span>
                     </div>
                   )}
                   <input
@@ -622,14 +782,45 @@ export const ProfilePage = () => {
                     className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   >
                     {uploadImage.isPending ? (
-                      <svg className="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin h-8 w-8 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                     ) : (
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <svg
+                        className="w-8 h-8 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
                       </svg>
                     )}
                   </button>
@@ -641,14 +832,40 @@ export const ProfilePage = () => {
                   className="absolute -bottom-2 -right-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 shadow-lg transition-colors"
                 >
                   {uploadImage.isPending ? (
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin h-5 w-5"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                   ) : (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
                     </svg>
                   )}
                 </button>
@@ -658,15 +875,26 @@ export const ProfilePage = () => {
                 {profile.primaryLocation && (
                   <p className="text-slate-600 flex items-center gap-1 mt-1">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
                     </svg>
                     {profile.primaryLocation.city}, {profile.primaryLocation.country}
                   </p>
                 )}
                 {profile.geoAreas && profile.geoAreas.length > 0 && (
                   <p className="text-sm text-slate-500 mt-1">
-                    Service areas: {profile.geoAreas.map(area => `${area.city}, ${area.country}`).join(' • ')}
+                    Service areas:{' '}
+                    {profile.geoAreas.map((area) => `${area.city}, ${area.country}`).join(' • ')}
                   </p>
                 )}
                 <div className="mt-3 flex items-center gap-3">
@@ -674,12 +902,17 @@ export const ProfilePage = () => {
                     {profile.verificationStatus}
                   </span>
                   {profile.tier && (
-                    <span className={`px-4 py-1.5 rounded-full text-sm font-semibold shadow-md ${
-                      profile.tier === 'PREMIUM' ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white' :
-                      profile.tier === 'GOLD' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white' :
-                      profile.tier === 'SILVER' ? 'bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800' :
-                      'bg-gradient-to-r from-orange-400 to-orange-600 text-white'
-                    }`}>
+                    <span
+                      className={`px-4 py-1.5 rounded-full text-sm font-semibold shadow-md ${
+                        profile.tier === 'PREMIUM'
+                          ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white'
+                          : profile.tier === 'GOLD'
+                            ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white'
+                            : profile.tier === 'SILVER'
+                              ? 'bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800'
+                              : 'bg-gradient-to-r from-orange-400 to-orange-600 text-white'
+                      }`}
+                    >
                       {profile.tier} TIER
                     </span>
                   )}
@@ -692,15 +925,20 @@ export const ProfilePage = () => {
               <div className="mt-6 px-6 pb-6 border-t border-slate-200 pt-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-slate-700">Profile Completeness</span>
-                  <span className="text-sm font-bold text-slate-900">{statistics.engagementMetrics.profileCompleteness}%</span>
+                  <span className="text-sm font-bold text-slate-900">
+                    {statistics.engagementMetrics.profileCompleteness}%
+                  </span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
                   <div
                     className={`h-3 rounded-full transition-all duration-500 ${
-                      statistics.engagementMetrics.profileCompleteness >= 90 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-                      statistics.engagementMetrics.profileCompleteness >= 70 ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
-                      statistics.engagementMetrics.profileCompleteness >= 50 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
-                      'bg-gradient-to-r from-red-400 to-red-600'
+                      statistics.engagementMetrics.profileCompleteness >= 90
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                        : statistics.engagementMetrics.profileCompleteness >= 70
+                          ? 'bg-gradient-to-r from-blue-500 to-indigo-500'
+                          : statistics.engagementMetrics.profileCompleteness >= 50
+                            ? 'bg-gradient-to-r from-yellow-400 to-orange-500'
+                            : 'bg-gradient-to-r from-red-400 to-red-600'
                     }`}
                     style={{ width: `${statistics.engagementMetrics.profileCompleteness}%` }}
                   />
@@ -727,8 +965,18 @@ export const ProfilePage = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
                 </svg>
                 Primary Location
               </CardTitle>
@@ -760,7 +1008,9 @@ export const ProfilePage = () => {
             {editingSection === 'primaryLocation' ? (
               <form onSubmit={handleSubmitLocation(onUpdatePrimaryLocation)} className="space-y-4">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-slate-600">Your primary location (where you're based)</p>
+                  <p className="text-sm text-slate-600">
+                    Your primary location (where you're based)
+                  </p>
                   <Button
                     type="button"
                     variant="outline"
@@ -772,15 +1022,36 @@ export const ProfilePage = () => {
                     {isCapturingLocation ? (
                       <span className="flex items-center gap-2">
                         <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                         Locating...
                       </span>
                     ) : (
                       <span className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
                         </svg>
                         Use Current Location
                       </span>
@@ -800,14 +1071,30 @@ export const ProfilePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Latitude</label>
-                    <Input {...registerLocation('latitude')} type="number" step="any" className="mt-1 h-10" required />
+                    <Input
+                      {...registerLocation('latitude')}
+                      type="number"
+                      step="any"
+                      className="mt-1 h-10"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Longitude</label>
-                    <Input {...registerLocation('longitude')} type="number" step="any" className="mt-1 h-10" required />
+                    <Input
+                      {...registerLocation('longitude')}
+                      type="number"
+                      step="any"
+                      className="mt-1 h-10"
+                      required
+                    />
                   </div>
                 </div>
-                <Button type="submit" disabled={updatePrimaryLocation.isPending} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                <Button
+                  type="submit"
+                  disabled={updatePrimaryLocation.isPending}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
                   {updatePrimaryLocation.isPending ? 'Saving...' : 'Save Primary Location'}
                 </Button>
               </form>
@@ -819,7 +1106,8 @@ export const ProfilePage = () => {
                       {profile.primaryLocation.city}, {profile.primaryLocation.country}
                     </p>
                     <p className="text-sm text-slate-500">
-                      Coordinates: {profile.primaryLocation.latitude.toFixed(4)}, {profile.primaryLocation.longitude.toFixed(4)}
+                      Coordinates: {profile.primaryLocation.latitude.toFixed(4)},{' '}
+                      {profile.primaryLocation.longitude.toFixed(4)}
                     </p>
                   </>
                 ) : (
@@ -834,21 +1122,34 @@ export const ProfilePage = () => {
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              <svg
+                className="w-6 h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                />
               </svg>
               Service Areas
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-slate-600 mb-4">
-              List all cities where you're available for work. Agencies will see these locations when searching for talent.
+              List all cities where you're available for work. Agencies will see these locations
+              when searching for talent.
             </p>
 
             {/* Current GEO Areas */}
             {profile.geoAreas && profile.geoAreas.length > 0 && (
               <div className="mb-6">
-                <h4 className="text-sm font-semibold text-slate-700 mb-3">Current Service Areas:</h4>
+                <h4 className="text-sm font-semibold text-slate-700 mb-3">
+                  Current Service Areas:
+                </h4>
                 <div className="flex flex-wrap gap-2">
                   {profile.geoAreas.map((area) => (
                     <div
@@ -859,7 +1160,9 @@ export const ProfilePage = () => {
                           : 'bg-slate-100 text-slate-700'
                       }`}
                     >
-                      <span>{area.city}, {area.country}</span>
+                      <span>
+                        {area.city}, {area.country}
+                      </span>
                       {area.isPrimary && (
                         <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Primary</span>
                       )}
@@ -870,8 +1173,18 @@ export const ProfilePage = () => {
                           disabled={removeGeoArea.isPending}
                           className="hover:text-red-600 transition-colors"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
                           </svg>
                         </button>
                       )}
@@ -899,28 +1212,57 @@ export const ProfilePage = () => {
                 />
                 <Button
                   onClick={handleAddGeoArea}
-                  disabled={addGeoArea.isPending || !newGeoAreaCity.trim() || !newGeoAreaCountry.trim()}
+                  disabled={
+                    addGeoArea.isPending || !newGeoAreaCity.trim() || !newGeoAreaCountry.trim()
+                  }
                   className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
                 >
                   {addGeoArea.isPending ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 inline" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 inline"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Adding...
                     </>
                   ) : (
                     <>
-                      <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      <svg
+                        className="w-4 h-4 mr-2 inline"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
                       </svg>
                       Add
                     </>
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 mt-2">Example: Belgrade, Serbia • Novi Sad, Serbia • Sombor, Serbia</p>
+              <p className="text-xs text-slate-500 mt-2">
+                Example: Belgrade, Serbia • Novi Sad, Serbia • Sombor, Serbia
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -930,8 +1272,18 @@ export const ProfilePage = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                  />
                 </svg>
                 Languages
               </CardTitle>
@@ -956,10 +1308,20 @@ export const ProfilePage = () => {
             {editingSection === 'languages' ? (
               <form onSubmit={handleSubmitLanguages(onUpdateLanguages)} className="space-y-4">
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Languages (comma separated)</label>
-                  <Input {...registerLanguages('languages')} placeholder="English, Spanish, French" className="mt-1 h-10" />
+                  <label className="text-sm font-semibold text-slate-700">
+                    Languages (comma separated)
+                  </label>
+                  <Input
+                    {...registerLanguages('languages')}
+                    placeholder="English, Spanish, French"
+                    className="mt-1 h-10"
+                  />
                 </div>
-                <Button type="submit" disabled={updateLanguages.isPending} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                <Button
+                  type="submit"
+                  disabled={updateLanguages.isPending}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
                   {updateLanguages.isPending ? 'Saving...' : 'Save'}
                 </Button>
               </form>
@@ -987,8 +1349,18 @@ export const ProfilePage = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                  />
                 </svg>
                 Tags & Specialties
               </CardTitle>
@@ -999,7 +1371,7 @@ export const ProfilePage = () => {
                   if (editingSection === 'tags') {
                     setEditingSection(null);
                   } else {
-                    resetTags({ tags: (profile.tags || []).join(', ') });
+                    resetTags({ selectedTags: profile.tags || [] });
                     setEditingSection('tags');
                   }
                 }}
@@ -1012,33 +1384,92 @@ export const ProfilePage = () => {
           <CardContent>
             {editingSection === 'tags' ? (
               <form onSubmit={handleSubmitTags(onUpdateTags)} className="space-y-4">
-                <div>
-                  <label className="text-sm font-semibold text-slate-700">Tags (comma separated)</label>
-                  <Input
-                    {...registerTags('tags')}
-                    placeholder="Commercial Acting, Horror Films, Product Modeling"
-                    className="mt-1 h-10"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">Add searchable keywords that describe your skills and specialties</p>
-                </div>
-                <Button type="submit" disabled={updateTags.isPending} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                {availableTags && (
+                  <>
+                    <div>
+                      <label className="text-sm font-semibold text-slate-700 mb-2 block">
+                        PRIMARY Tags
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {availableTags.primaryTags.map((tag) => (
+                          <label key={tag} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              value={tag}
+                              {...registerTags('selectedTags')}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm">#{tag}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-slate-700 mb-2 block">
+                        SECONDARY Tags
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {availableTags.secondaryTags.map((tag) => (
+                          <label key={tag} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              value={tag}
+                              {...registerTags('selectedTags')}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm">#{tag}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                <Button
+                  type="submit"
+                  disabled={updateTags.isPending}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
                   {updateTags.isPending ? 'Saving...' : 'Save'}
                 </Button>
               </form>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {profile.tags && profile.tags.length > 0 ? (
-                  profile.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-4 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-medium shadow-sm"
-                    >
-                      #{tag}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-slate-500">No tags added yet. Add tags to improve searchability!</p>
+              <div className="space-y-4">
+                {profile.primaryTags && profile.primaryTags.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700 mb-2">PRIMARY</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.primaryTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-4 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-sm font-medium shadow-sm"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
+                {profile.secondaryTags && profile.secondaryTags.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700 mb-2">SECONDARY</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.secondaryTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-4 py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-medium shadow-sm"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(!profile.primaryTags || profile.primaryTags.length === 0) &&
+                  (!profile.secondaryTags || profile.secondaryTags.length === 0) && (
+                    <p className="text-slate-500">
+                      No tags added yet. Add tags to improve searchability!
+                    </p>
+                  )}
               </div>
             )}
           </CardContent>
@@ -1049,15 +1480,27 @@ export const ProfilePage = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                  />
                 </svg>
                 Capabilities
               </CardTitle>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setEditingSection(editingSection === 'capabilities' ? null : 'capabilities')}
+                onClick={() =>
+                  setEditingSection(editingSection === 'capabilities' ? null : 'capabilities')
+                }
                 className="text-blue-600 border-blue-600 hover:bg-blue-50"
               >
                 {editingSection === 'capabilities' ? 'Cancel' : 'Edit'}
@@ -1068,22 +1511,31 @@ export const ProfilePage = () => {
             {editingSection === 'capabilities' ? (
               <form onSubmit={handleSubmitCapabilities(onUpdateCapabilities)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {['Acting', 'Voiceover', 'Modeling', 'Singing', 'Dancing', 'Hosting'].map((capability) => {
-                    const key = `canDo${capability}` as keyof UpdateCapabilitiesRequest;
-                    return (
-                      <label key={capability} className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-50 transition-colors">
-                        <input
-                          type="checkbox"
-                          {...registerCapabilities(key)}
-                          defaultChecked={Boolean(profile.capabilities[key])}
-                          className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="text-sm font-medium text-slate-700">{capability}</span>
-                      </label>
-                    );
-                  })}
+                  {['Acting', 'Voiceover', 'Modeling', 'Singing', 'Dancing', 'Hosting'].map(
+                    (capability) => {
+                      const key = `canDo${capability}` as keyof UpdateCapabilitiesRequest;
+                      return (
+                        <label
+                          key={capability}
+                          className="flex items-center space-x-3 cursor-pointer p-3 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            {...registerCapabilities(key)}
+                            defaultChecked={Boolean(profile.capabilities[key])}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                          />
+                          <span className="text-sm font-medium text-slate-700">{capability}</span>
+                        </label>
+                      );
+                    }
+                  )}
                 </div>
-                <Button type="submit" disabled={updateCapabilities.isPending} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                <Button
+                  type="submit"
+                  disabled={updateCapabilities.isPending}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
                   {updateCapabilities.isPending ? 'Saving...' : 'Save'}
                 </Button>
               </form>
@@ -1116,8 +1568,18 @@ export const ProfilePage = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                  />
                 </svg>
                 Social Links
               </CardTitle>
@@ -1128,10 +1590,12 @@ export const ProfilePage = () => {
                   if (editingSection === 'social') {
                     setEditingSection(null);
                   } else {
-                    const instagram = profile.socialLinks?.find(sl => sl.platform === 'Instagram');
-                    const twitter = profile.socialLinks?.find(sl => sl.platform === 'Twitter');
-                    const linkedin = profile.socialLinks?.find(sl => sl.platform === 'LinkedIn');
-                    const website = profile.socialLinks?.find(sl => sl.platform === 'Website');
+                    const instagram = profile.socialLinks?.find(
+                      (sl) => sl.platform === 'Instagram'
+                    );
+                    const twitter = profile.socialLinks?.find((sl) => sl.platform === 'Twitter');
+                    const linkedin = profile.socialLinks?.find((sl) => sl.platform === 'LinkedIn');
+                    const website = profile.socialLinks?.find((sl) => sl.platform === 'Website');
 
                     resetSocial({
                       instagramUrl: instagram?.url || '',
@@ -1154,22 +1618,42 @@ export const ProfilePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Instagram</label>
-                    <Input {...registerSocial('instagramUrl')} placeholder="https://instagram.com/..." className="mt-1 h-10" />
+                    <Input
+                      {...registerSocial('instagramUrl')}
+                      placeholder="https://instagram.com/..."
+                      className="mt-1 h-10"
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Twitter</label>
-                    <Input {...registerSocial('twitterUrl')} placeholder="https://twitter.com/..." className="mt-1 h-10" />
+                    <Input
+                      {...registerSocial('twitterUrl')}
+                      placeholder="https://twitter.com/..."
+                      className="mt-1 h-10"
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">LinkedIn</label>
-                    <Input {...registerSocial('linkedinUrl')} placeholder="https://linkedin.com/..." className="mt-1 h-10" />
+                    <Input
+                      {...registerSocial('linkedinUrl')}
+                      placeholder="https://linkedin.com/..."
+                      className="mt-1 h-10"
+                    />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Website</label>
-                    <Input {...registerSocial('websiteUrl')} placeholder="https://..." className="mt-1 h-10" />
+                    <Input
+                      {...registerSocial('websiteUrl')}
+                      placeholder="https://..."
+                      className="mt-1 h-10"
+                    />
                   </div>
                 </div>
-                <Button type="submit" disabled={updateSocialLinks.isPending} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                <Button
+                  type="submit"
+                  disabled={updateSocialLinks.isPending}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
                   {updateSocialLinks.isPending ? 'Saving...' : 'Save'}
                 </Button>
               </form>
@@ -1200,8 +1684,18 @@ export const ProfilePage = () => {
                         </svg>
                       )}
                       {link.platform === 'Website' && (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                          />
                         </svg>
                       )}
                       {link.platform}
@@ -1220,8 +1714,18 @@ export const ProfilePage = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
                 </svg>
                 Portfolio
               </CardTitle>
@@ -1292,3 +1796,4 @@ export const ProfilePage = () => {
     </MainLayout>
   );
 };
+export default ProfilePage;

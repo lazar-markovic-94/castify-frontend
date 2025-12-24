@@ -12,6 +12,7 @@ import {
   UpdateSocialLinksRequest,
   TalentSearchRequest,
   PagedResult,
+  AvailableTagsResponse,
 } from '../../domain/dtos';
 
 class TalentRepository {
@@ -48,7 +49,9 @@ class TalentRepository {
   }
 
   async removeGeoArea(request: RemoveGeoAreaRequest): Promise<TalentProfile> {
-    const response = await apiClient.delete<TalentProfile>('/api/talents/geo-areas', { data: request });
+    const response = await apiClient.delete<TalentProfile>('/api/talents/geo-areas', {
+      data: request,
+    });
     return response.data;
   }
 
@@ -79,12 +82,25 @@ class TalentRepository {
 
   async searchTalents(request: TalentSearchRequest): Promise<PagedResult<TalentProfile>> {
     // Use public client - no authentication required
-    const response = await publicApiClient.post<PagedResult<TalentProfile>>('/api/talents/search', request);
+    const response = await publicApiClient.post<PagedResult<TalentProfile>>(
+      '/api/talents/search',
+      request
+    );
     return response.data;
   }
 
   async updateProfileImage(profileImageUrl: string): Promise<TalentProfile> {
-    const response = await apiClient.put<TalentProfile>('/api/talents/profile-image', { profileImageUrl });
+    const response = await apiClient.put<TalentProfile>('/api/talents/profile-image', {
+      profileImageUrl,
+    });
+    return response.data;
+  }
+
+  async getAvailableTags(): Promise<AvailableTagsResponse> {
+    // Use public client - no authentication required
+    const response = await publicApiClient.get<AvailableTagsResponse>(
+      '/api/talents/available-tags'
+    );
     return response.data;
   }
 }

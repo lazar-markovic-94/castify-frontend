@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { talentRepository } from '../data/repositories';
 import {
@@ -59,7 +60,8 @@ export const useUpdatePrimaryLocation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: UpdatePrimaryLocationRequest) => talentRepository.updatePrimaryLocation(request),
+    mutationFn: (request: UpdatePrimaryLocationRequest) =>
+      talentRepository.updatePrimaryLocation(request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
     },
@@ -137,8 +139,7 @@ export const useUpdateTalentSocialLinks = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: UpdateSocialLinksRequest) =>
-      talentRepository.updateSocialLinks(request),
+    mutationFn: (request: UpdateSocialLinksRequest) => talentRepository.updateSocialLinks(request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
     },
@@ -160,5 +161,12 @@ export const useSearchTalents = (request: TalentSearchRequest) => {
   return useQuery({
     queryKey: ['searchTalents', request],
     queryFn: () => talentRepository.searchTalents(request),
+  });
+};
+
+export const useAvailableTags = () => {
+  return useQuery({
+    queryKey: ['availableTags'],
+    queryFn: () => talentRepository.getAvailableTags(),
   });
 };

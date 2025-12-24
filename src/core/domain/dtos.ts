@@ -51,6 +51,11 @@ export interface UpdateTagsRequest {
   tags: string[];
 }
 
+export interface AvailableTagsResponse {
+  primaryTags: string[];
+  secondaryTags: string[];
+}
+
 export interface UpdateCapabilitiesRequest {
   canDoVoiceover: boolean;
   canDoActing: boolean;

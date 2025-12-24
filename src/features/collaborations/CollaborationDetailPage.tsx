@@ -93,7 +93,7 @@ export const CollaborationDetailPage = () => {
     try {
       await acceptMutation.mutateAsync(collaboration.collaborationId);
       showSuccess('Collaboration accepted successfully!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(`Failed to accept: ${error.message || 'Unknown error'}`);
     }
   };
@@ -104,7 +104,7 @@ export const CollaborationDetailPage = () => {
       await declineMutation.mutateAsync(collaboration.collaborationId);
       showSuccess('Collaboration declined.');
       navigate(-1);
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(`Failed to decline: ${error.message || 'Unknown error'}`);
     }
   };
@@ -114,7 +114,7 @@ export const CollaborationDetailPage = () => {
     try {
       await startMutation.mutateAsync(collaboration.collaborationId);
       showSuccess('Collaboration started! Good luck with the project.');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(`Failed to start: ${error.message || 'Unknown error'}`);
     }
   };
@@ -124,7 +124,7 @@ export const CollaborationDetailPage = () => {
     try {
       await completeMutation.mutateAsync(collaboration.collaborationId);
       showSuccess('Collaboration marked as completed!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(`Failed to complete: ${error.message || 'Unknown error'}`);
     }
   };
@@ -134,7 +134,7 @@ export const CollaborationDetailPage = () => {
     try {
       await cancelMutation.mutateAsync(collaboration.collaborationId);
       showSuccess('Collaboration canceled.');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(`Failed to cancel: ${error.message || 'Unknown error'}`);
     }
   };
@@ -343,3 +343,4 @@ export const CollaborationDetailPage = () => {
     </MainLayout>
   );
 };
+export default CollaborationDetailPage;

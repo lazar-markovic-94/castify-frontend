@@ -46,10 +46,7 @@ export const TalentDetailPage = () => {
 
   // Image error state
   const [imageError, setImageError] = useState(false);
-  const {
-    data: ratingsData,
-    isLoading: isLoadingRatings,
-  } = useTalentRatings({
+  const { data: ratingsData, isLoading: isLoadingRatings } = useTalentRatings({
     talentProfileId: id!,
     page: currentReviewPage,
     size: 10,
@@ -130,7 +127,7 @@ export const TalentDetailPage = () => {
       await createRating.mutateAsync(reviewData);
       setShowReviewForm(false);
       showSuccess('Review submitted successfully!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting review:', error);
       showError(`Failed to submit review: ${error.message || 'Unknown error'}`);
     }
@@ -146,20 +143,22 @@ export const TalentDetailPage = () => {
       await createCollaboration.mutateAsync(requestData);
       setShowCollaborationModal(false);
       showSuccess('Collaboration request sent successfully! The talent will be notified.');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending collaboration request:', error);
       showError(`Failed to send collaboration request: ${error.message || 'Unknown error'}`);
     }
   };
 
-  const capabilities = talent.capabilities ? [
-    talent.capabilities.canDoActing && 'Acting',
-    talent.capabilities.canDoVoiceover && 'Voiceover',
-    talent.capabilities.canDoModeling && 'Modeling',
-    talent.capabilities.canDoSinging && 'Singing',
-    talent.capabilities.canDoDancing && 'Dancing',
-    talent.capabilities.canDoHosting && 'Hosting',
-  ].filter((cap): cap is string => Boolean(cap)) : [];
+  const capabilities = talent.capabilities
+    ? [
+        talent.capabilities.canDoActing && 'Acting',
+        talent.capabilities.canDoVoiceover && 'Voiceover',
+        talent.capabilities.canDoModeling && 'Modeling',
+        talent.capabilities.canDoSinging && 'Singing',
+        talent.capabilities.canDoDancing && 'Dancing',
+        talent.capabilities.canDoHosting && 'Hosting',
+      ].filter((cap): cap is string => Boolean(cap))
+    : [];
 
   return (
     <MainLayout>
@@ -180,7 +179,9 @@ export const TalentDetailPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {/* Profile Image or Initials */}
                   <div className="md:col-span-1">
-                    {talent.profileImageUrl && talent.profileImageUrl.trim() !== '' && !imageError ? (
+                    {talent.profileImageUrl &&
+                    talent.profileImageUrl.trim() !== '' &&
+                    !imageError ? (
                       <img
                         src={talent.profileImageUrl}
                         alt={talent.fullName}
@@ -189,7 +190,9 @@ export const TalentDetailPage = () => {
                       />
                     ) : (
                       <div className="w-full aspect-square bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center rounded-lg">
-                        <span className="text-8xl font-bold text-white/30">{getInitials(talent.fullName)}</span>
+                        <span className="text-8xl font-bold text-white/30">
+                          {getInitials(talent.fullName)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -199,8 +202,18 @@ export const TalentDetailPage = () => {
 
                     {talent.primaryLocation && (
                       <p className="text-muted-foreground mb-2">
-                        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <svg
+                          className="w-4 h-4 inline mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
                         </svg>
                         Based in: {talent.primaryLocation.city}, {talent.primaryLocation.country}
                       </p>
@@ -227,40 +240,59 @@ export const TalentDetailPage = () => {
                       </div>
                     )}
 
-                    {talent.averageRating !== null && talent.totalRatings !== null && talent.totalRatings > 0 && (
-                      <div className="mb-6 flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <svg className="w-6 h-6 text-yellow-500 fill-yellow-500" viewBox="0 0 24 24">
-                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                          </svg>
-                          <span className="text-2xl font-bold">{talent.averageRating.toFixed(1)}</span>
-                          <span className="text-muted-foreground">({talent.totalRatings} {talent.totalRatings === 1 ? 'review' : 'reviews'})</span>
+                    {talent.averageRating !== null &&
+                      talent.totalRatings !== null &&
+                      talent.totalRatings > 0 && (
+                        <div className="mb-6 flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <svg
+                              className="w-6 h-6 text-yellow-500 fill-yellow-500"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                            </svg>
+                            <span className="text-2xl font-bold">
+                              {talent.averageRating.toFixed(1)}
+                            </span>
+                            <span className="text-muted-foreground">
+                              ({talent.totalRatings}{' '}
+                              {talent.totalRatings === 1 ? 'review' : 'reviews'})
+                            </span>
+                          </div>
+                          {talent.tier && (
+                            <span
+                              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                talent.tier === 'PREMIUM'
+                                  ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white'
+                                  : talent.tier === 'GOLD'
+                                    ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white'
+                                    : talent.tier === 'SILVER'
+                                      ? 'bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800'
+                                      : 'bg-gradient-to-r from-orange-400 to-orange-600 text-white'
+                              }`}
+                            >
+                              {talent.tier} TIER
+                            </span>
+                          )}
                         </div>
-                        {talent.tier && (
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            talent.tier === 'PREMIUM' ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white' :
-                            talent.tier === 'GOLD' ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white' :
-                            talent.tier === 'SILVER' ? 'bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800' :
-                            'bg-gradient-to-r from-orange-400 to-orange-600 text-white'
-                          }`}>
-                            {talent.tier} TIER
-                          </span>
-                        )}
-                      </div>
-                    )}
+                      )}
 
                     {(talent.completedCollaborations !== null || talent.successRate !== null) && (
                       <div className="mb-6 flex gap-6">
                         {talent.completedCollaborations !== null && (
                           <div>
                             <p className="text-sm text-muted-foreground">Completed Projects</p>
-                            <p className="text-xl font-semibold">{talent.completedCollaborations}</p>
+                            <p className="text-xl font-semibold">
+                              {talent.completedCollaborations}
+                            </p>
                           </div>
                         )}
                         {talent.successRate !== null && (
                           <div>
                             <p className="text-sm text-muted-foreground">Success Rate</p>
-                            <p className="text-xl font-semibold">{talent.successRate.toFixed(0)}%</p>
+                            <p className="text-xl font-semibold">
+                              {talent.successRate.toFixed(0)}%
+                            </p>
                           </div>
                         )}
                       </div>
@@ -275,13 +307,41 @@ export const TalentDetailPage = () => {
 
                     {capabilities.length > 0 && (
                       <div className="mb-6">
-                        <h2 className="text-lg font-semibold mb-2">Capabilities</h2>
+                        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                          <svg
+                            className="w-5 h-5 text-purple-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                            />
+                          </svg>
+                          Capabilities
+                        </h2>
                         <div className="flex flex-wrap gap-2">
                           {capabilities.map((cap) => (
                             <span
                               key={cap}
-                              className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 text-primary"
+                              className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md hover:shadow-lg transition-shadow"
                             >
+                              <svg
+                                className="w-4 h-4 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
                               {cap}
                             </span>
                           ))}
@@ -291,13 +351,41 @@ export const TalentDetailPage = () => {
 
                     {talent.languages.length > 0 && (
                       <div className="mb-6">
-                        <h2 className="text-lg font-semibold mb-2">Languages</h2>
+                        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                          <svg
+                            className="w-5 h-5 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                            />
+                          </svg>
+                          Languages
+                        </h2>
                         <div className="flex flex-wrap gap-2">
                           {talent.languages.map((lang) => (
                             <span
                               key={lang}
-                              className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-secondary"
+                              className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md hover:shadow-lg transition-shadow"
                             >
+                              <svg
+                                className="w-4 h-4 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                                />
+                              </svg>
                               {lang}
                             </span>
                           ))}
@@ -307,13 +395,41 @@ export const TalentDetailPage = () => {
 
                     {talent.tags.length > 0 && (
                       <div className="mb-6">
-                        <h2 className="text-lg font-semibold mb-2">Tags</h2>
+                        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                          <svg
+                            className="w-5 h-5 text-emerald-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                            />
+                          </svg>
+                          Tags
+                        </h2>
                         <div className="flex flex-wrap gap-2">
                           {talent.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-accent"
+                              className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md hover:shadow-lg transition-shadow"
                             >
+                              <svg
+                                className="w-4 h-4 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
+                                />
+                              </svg>
                               {tag}
                             </span>
                           ))}
@@ -352,7 +468,14 @@ export const TalentDetailPage = () => {
                       {!currentUser && (
                         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                           <p className="text-sm text-blue-800 text-center">
-                            <Link to="/login" className="font-semibold hover:underline">Sign in</Link> or <Link to="/register" className="font-semibold hover:underline">create an account</Link> to contact this talent or request collaboration
+                            <Link to="/login" className="font-semibold hover:underline">
+                              Sign in
+                            </Link>{' '}
+                            or{' '}
+                            <Link to="/register" className="font-semibold hover:underline">
+                              create an account
+                            </Link>{' '}
+                            to contact this talent or request collaboration
                           </p>
                         </div>
                       )}
@@ -373,11 +496,27 @@ export const TalentDetailPage = () => {
                           className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold shadow-lg"
                         >
                           <span className="flex items-center gap-2">
-                            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            <svg
+                              className="w-5 h-5 flex-shrink-0"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                              />
                             </svg>
-                            <span className="hidden sm:inline">{!currentUser ? 'Sign in to Request Collaboration' : 'Request Collaboration'}</span>
-                            <span className="sm:hidden">{!currentUser ? 'Sign in to Collaborate' : 'Collaborate'}</span>
+                            <span className="hidden sm:inline">
+                              {!currentUser
+                                ? 'Sign in to Request Collaboration'
+                                : 'Request Collaboration'}
+                            </span>
+                            <span className="sm:hidden">
+                              {!currentUser ? 'Sign in to Collaborate' : 'Collaborate'}
+                            </span>
                           </span>
                         </Button>
                         <Button
@@ -390,18 +529,43 @@ export const TalentDetailPage = () => {
                           {createConversation.isPending ? (
                             <span className="flex items-center gap-2">
                               <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
                               </svg>
                               Starting conversation...
                             </span>
                           ) : (
                             <span className="flex items-center gap-2">
-                              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              <svg
+                                className="w-5 h-5 flex-shrink-0"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                />
                               </svg>
-                              <span className="hidden sm:inline">{!currentUser ? 'Sign in to Contact Talent' : 'Contact Talent'}</span>
-                              <span className="sm:hidden">{!currentUser ? 'Sign in to Contact' : 'Contact'}</span>
+                              <span className="hidden sm:inline">
+                                {!currentUser ? 'Sign in to Contact Talent' : 'Contact Talent'}
+                              </span>
+                              <span className="sm:hidden">
+                                {!currentUser ? 'Sign in to Contact' : 'Contact'}
+                              </span>
                             </span>
                           )}
                         </Button>
@@ -437,7 +601,9 @@ export const TalentDetailPage = () => {
             {isClient && !showReviewForm && (
               <Card>
                 <CardContent className="p-8 text-center">
-                  <h3 className="text-xl font-bold mb-2">Have you worked with {talent.fullName}?</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    Have you worked with {talent.fullName}?
+                  </h3>
                   <p className="text-gray-600 mb-4">Share your experience to help other clients</p>
                   <Button
                     onClick={() => setShowReviewForm(true)}
@@ -464,9 +630,7 @@ export const TalentDetailPage = () => {
             {ratingsData && ratingsData.ratings.length > 0 && (
               <Card>
                 <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold mb-6">
-                    Reviews ({ratingsData.totalRatings})
-                  </h2>
+                  <h2 className="text-2xl font-bold mb-6">Reviews ({ratingsData.totalRatings})</h2>
                   <ReviewList
                     reviews={ratingsData.ratings}
                     totalReviews={ratingsData.totalRatings}
@@ -483,9 +647,7 @@ export const TalentDetailPage = () => {
           {/* Sidebar - Right Column */}
           <div className="lg:col-span-1 space-y-6">
             {/* Rating Breakdown */}
-            {statistics && !isLoadingStatistics && (
-              <RatingBreakdown statistics={statistics} />
-            )}
+            {statistics && !isLoadingStatistics && <RatingBreakdown statistics={statistics} />}
 
             {isLoadingStatistics && (
               <Card>
@@ -535,3 +697,4 @@ export const TalentDetailPage = () => {
     </MainLayout>
   );
 };
+export default TalentDetailPage;
