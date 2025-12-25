@@ -9,10 +9,11 @@ import {
   useUpdateTalentTags,
   useUpdateTalentCapabilities,
   useUpdateIntroductionVideo,
+  useRemoveIntroductionVideo,
   useUpdateProfileImage,
   useAvailableTags,
 } from '../../core/application/useTalents';
-import { useUploadImage } from '../../core/application/useUpload';
+import { useUploadImage, useUploadVideo } from '../../core/application/useUpload';
 import { useToast } from '../../shared/contexts/ToastContext';
 import {
   usePortfolioItems,
@@ -64,8 +65,10 @@ export const ProfilePage = () => {
   const updateTags = useUpdateTalentTags();
   const updateCapabilities = useUpdateTalentCapabilities();
   const updateIntroductionVideo = useUpdateIntroductionVideo();
+  const removeIntroductionVideo = useRemoveIntroductionVideo();
   const updateProfileImage = useUpdateProfileImage();
   const uploadImage = useUploadImage();
+  const uploadVideo = useUploadVideo();
   const { showSuccess, showError } = useToast();
 
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -367,11 +370,11 @@ export const ProfilePage = () => {
 
     try {
       // Upload the video file
-      const uploadResult = await uploadImage.mutateAsync(introVideoFile);
+      const videoUrl = await uploadVideo.mutateAsync(introVideoFile);
 
       // Update the introduction video
       await updateIntroductionVideo.mutateAsync({
-        introductionVideoUrl: uploadResult.url,
+        introductionVideoUrl: videoUrl,
         introductionVideoDuration: introVideoDuration,
       });
 
@@ -391,10 +394,7 @@ export const ProfilePage = () => {
     }
 
     try {
-      await updateIntroductionVideo.mutateAsync({
-        introductionVideoUrl: '',
-        introductionVideoDuration: 0,
-      });
+      await removeIntroductionVideo.mutateAsync();
       showSuccess('Introduction video removed successfully!');
     } catch (error: unknown) {
       console.error('Error removing introduction video:', error);

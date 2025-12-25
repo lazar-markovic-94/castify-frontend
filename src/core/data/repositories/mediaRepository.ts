@@ -27,26 +27,43 @@ class MediaRepository {
   /**
    * Upload a file (image, video, or audio) and create a media asset
    * Returns the created media asset
+   *
+   * This method now uses the new portfolio media upload endpoint which
+   * handles both file upload and media asset creation in one operation.
+   *
+   * @param file - The file to upload
+   * @param contentType - The content type (mediaType is inferred from file MIME type)
+   * @param title - Optional title for the media
+   * @param description - Optional description for the media
    */
-  async uploadMedia(file: File, mediaType: string, contentType: string, title?: string, description?: string): Promise<MediaAsset> {
-    // First upload the file
+  async uploadMedia(
+    file: File,
+    _mediaType: string,
+    contentType: string,
+    title?: string,
+    description?: string
+  ): Promise<MediaAsset> {
+    // Note: mediaType is now inferred from the file's MIME type on the backend
+    // Use the new portfolio media upload endpoint
+    // This handles both file upload and media asset creation
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('contentType', contentType);
+    if (title) formData.append('title', title);
+    if (description) formData.append('description', description);
 
-    const uploadResponse = await apiClient.post<{ url: string }>('/api/upload/image', formData);
-    const fileUrl = `${apiClient.defaults.baseURL}${uploadResponse.data.url}`;
+    const response = await apiClient.post<MediaAsset>('/api/upload/portfolio-media', formData);
 
-    // Then create the media asset
-    const mediaAssetRequest: CreateMediaAssetRequest = {
-      mediaType,
-      contentType,
-      fileUrl,
-      title,
-      description,
-      fileSizeBytes: file.size,
-    };
+    // Convert relative URLs to absolute URLs
+    const mediaAsset = response.data;
+    if (!mediaAsset.fileUrl.startsWith('http')) {
+      mediaAsset.fileUrl = `${apiClient.defaults.baseURL}${mediaAsset.fileUrl}`;
+    }
+    if (mediaAsset.thumbnailUrl && !mediaAsset.thumbnailUrl.startsWith('http')) {
+      mediaAsset.thumbnailUrl = `${apiClient.defaults.baseURL}${mediaAsset.thumbnailUrl}`;
+    }
 
-    return this.createMediaAsset(mediaAssetRequest);
+    return mediaAsset;
   }
 }
 

@@ -80,6 +80,11 @@ class TalentRepository {
     return response.data;
   }
 
+  async removeIntroductionVideo(): Promise<TalentProfile> {
+    const response = await apiClient.delete<TalentProfile>('/api/talents/introduction-video');
+    return response.data;
+  }
+
   async searchTalents(request: TalentSearchRequest): Promise<PagedResult<TalentProfile>> {
     // Use public client - no authentication required
     const response = await publicApiClient.post<PagedResult<TalentProfile>>(

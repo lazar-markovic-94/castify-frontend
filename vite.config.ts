@@ -57,6 +57,13 @@ export default defineConfig(({ mode }) => ({
     port: 3000,
     host: true,
     open: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 
   // Preview server configuration

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { PortfolioItemWithMedia } from '../../../core/domain/entities';
 import { MediaType } from '../../../core/domain/enums';
 
@@ -19,10 +19,12 @@ export const MediaViewer = ({
   hasNext = false,
   hasPrevious = false,
 }: MediaViewerProps) => {
+  const [videoError, setVideoError] = useState(false);
+
+  // Handle keyboard navigation and body scroll
   useEffect(() => {
     if (!item) return;
 
-    // Handle keyboard navigation
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
@@ -117,14 +119,64 @@ export const MediaViewer = ({
           )}
 
           {item.mediaAsset.mediaType === MediaType.VIDEO && (
-            <video
-              src={item.mediaAsset.fileUrl}
-              controls
-              autoPlay
-              className="max-w-full max-h-[80vh] rounded-lg"
-            >
-              Your browser does not support the video tag.
-            </video>
+            <>
+              {!videoError ? (
+                <video
+                  key={item.portfolioItemId}
+                  src={item.mediaAsset.fileUrl}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-[80vh] rounded-lg"
+                  onError={(e) => {
+                    console.error('Video failed to load:', {
+                      url: item.mediaAsset.fileUrl,
+                      error: e,
+                      currentTarget: e.currentTarget,
+                    });
+                    setVideoError(true);
+                  }}
+                  onLoadStart={() => {
+                    console.log('Video load started:', item.mediaAsset.fileUrl);
+                  }}
+                  onCanPlay={() => {
+                    console.log('Video can play:', item.mediaAsset.fileUrl);
+                  }}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <div className="bg-red-900 bg-opacity-50 rounded-lg p-12 w-full max-w-2xl">
+                  <div className="flex flex-col items-center space-y-4 text-white">
+                    <svg
+                      className="w-16 h-16"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                    <h3 className="text-xl font-semibold">Video Failed to Load</h3>
+                    <p className="text-sm text-gray-300 text-center">
+                      The video could not be loaded. This might be due to:
+                    </p>
+                    <ul className="text-sm text-gray-300 list-disc list-inside text-left">
+                      <li>Invalid or expired video URL</li>
+                      <li>Unsupported video format</li>
+                      <li>Network connectivity issues</li>
+                      <li>CORS restrictions</li>
+                    </ul>
+                    <div className="mt-4 p-3 bg-black bg-opacity-50 rounded font-mono text-xs break-all max-w-lg">
+                      URL: {item.mediaAsset.fileUrl}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {item.mediaAsset.mediaType === MediaType.AUDIO && (

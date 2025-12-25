@@ -50,8 +50,9 @@ export const useCreateTalentProfile = () => {
 
   return useMutation({
     mutationFn: (request: CreateTalentProfileRequest) => talentRepository.createProfile(request),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['talentStatistics', data.talentProfileId] });
     },
   });
 };
@@ -62,8 +63,9 @@ export const useUpdatePrimaryLocation = () => {
   return useMutation({
     mutationFn: (request: UpdatePrimaryLocationRequest) =>
       talentRepository.updatePrimaryLocation(request),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['talentStatistics', data.talentProfileId] });
     },
   });
 };
@@ -106,8 +108,9 @@ export const useUpdateTalentLanguages = () => {
 
   return useMutation({
     mutationFn: (request: UpdateLanguagesRequest) => talentRepository.updateLanguages(request),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['talentStatistics', data.talentProfileId] });
     },
   });
 };
@@ -117,8 +120,9 @@ export const useUpdateTalentTags = () => {
 
   return useMutation({
     mutationFn: (request: UpdateTagsRequest) => talentRepository.updateTags(request),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['talentStatistics', data.talentProfileId] });
     },
   });
 };
@@ -129,8 +133,9 @@ export const useUpdateTalentCapabilities = () => {
   return useMutation({
     mutationFn: (request: UpdateCapabilitiesRequest) =>
       talentRepository.updateCapabilities(request),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['talentStatistics', data.talentProfileId] });
     },
   });
 };
@@ -141,8 +146,21 @@ export const useUpdateIntroductionVideo = () => {
   return useMutation({
     mutationFn: (request: UpdateIntroductionVideoRequest) =>
       talentRepository.updateIntroductionVideo(request),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['talentStatistics', data.talentProfileId] });
+    },
+  });
+};
+
+export const useRemoveIntroductionVideo = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => talentRepository.removeIntroductionVideo(),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['talentStatistics', data.talentProfileId] });
     },
   });
 };
@@ -152,8 +170,9 @@ export const useUpdateProfileImage = () => {
 
   return useMutation({
     mutationFn: (profileImageUrl: string) => talentRepository.updateProfileImage(profileImageUrl),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['myTalentProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['talentStatistics', data.talentProfileId] });
     },
   });
 };
