@@ -1,6 +1,7 @@
 import { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { cn } from '../../lib/utils';
 import { Button } from './Button';
+import { AlertModal } from './AlertModal';
 import { MediaType, ContentType } from '../../../core/domain/enums';
 
 interface MediaUploadProps {
@@ -31,6 +32,16 @@ export const MediaUpload = ({
   const [mediaType, setMediaType] = useState<MediaType>(MediaType.IMAGE);
   const [contentType, setContentType] = useState<ContentType>(ContentType.PORTFOLIO_ITEM);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -71,7 +82,11 @@ export const MediaUpload = ({
     // Validate file size
     const fileSizeMB = file.size / (1024 * 1024);
     if (fileSizeMB > maxSizeMB) {
-      alert(`File size exceeds ${maxSizeMB}MB limit`);
+      setAlertModal({
+        isOpen: true,
+        title: 'File Too Large',
+        message: `File size exceeds ${maxSizeMB}MB limit. Please select a smaller file.`,
+      });
       return;
     }
 
@@ -84,7 +99,11 @@ export const MediaUpload = ({
     } else if (file.type.startsWith('audio/')) {
       detectedMediaType = MediaType.AUDIO;
     } else {
-      alert('Unsupported file type');
+      setAlertModal({
+        isOpen: true,
+        title: 'Unsupported File Type',
+        message: 'This file type is not supported. Please select an image, video, or audio file.',
+      });
       return;
     }
 
@@ -173,15 +192,9 @@ export const MediaUpload = ({
               />
             </svg>
             <div>
-              <p className="text-lg font-medium text-gray-700">
-                Drag and drop your media here
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                or click to browse (max {maxSizeMB}MB)
-              </p>
-              <p className="text-xs text-gray-400 mt-2">
-                Supports images, videos, and audio files
-              </p>
+              <p className="text-lg font-medium text-gray-700">Drag and drop your media here</p>
+              <p className="text-sm text-gray-500 mt-1">or click to browse (max {maxSizeMB}MB)</p>
+              <p className="text-xs text-gray-400 mt-2">Supports images, videos, and audio files</p>
             </div>
           </div>
         </div>
@@ -190,11 +203,7 @@ export const MediaUpload = ({
           {/* Preview */}
           {preview && (
             <div className="flex justify-center">
-              <img
-                src={preview}
-                alt="Preview"
-                className="max-h-64 rounded-lg object-contain"
-              />
+              <img src={preview} alt="Preview" className="max-h-64 rounded-lg object-contain" />
             </div>
           )}
           {!preview && mediaType === MediaType.VIDEO && (
@@ -223,9 +232,7 @@ export const MediaUpload = ({
           {/* Metadata form */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Content Type
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Content Type</label>
               <select
                 value={contentType}
                 onChange={(e) => setContentType(e.target.value as ContentType)}
@@ -275,6 +282,15 @@ export const MediaUpload = ({
           </div>
         </div>
       )}
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        title={alertModal.title}
+        message={alertModal.message}
+        variant="error"
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+      />
     </div>
   );
 };

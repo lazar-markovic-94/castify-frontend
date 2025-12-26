@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   useCollaboration,
@@ -11,6 +12,7 @@ import { useCurrentUser } from '../../core/application/useAuth';
 import { MainLayout } from '../../app/layouts/MainLayout';
 import { Button } from '../../shared/components/ui/Button';
 import { Card, CardContent } from '../../shared/components/ui/Card';
+import { ConfirmModal } from '../../shared/components/ui/ConfirmModal';
 import { CollaborationStatus, UserRole, ServiceType } from '../../core/domain/enums';
 import { useToast } from '../../shared/contexts/ToastContext';
 
@@ -34,6 +36,20 @@ export const CollaborationDetailPage = () => {
   const startMutation = useStartCollaboration();
   const completeMutation = useCompleteCollaboration();
   const cancelMutation = useCancelCollaboration();
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'info',
+  });
 
   if (isLoading) {
     return (
@@ -97,54 +113,89 @@ export const CollaborationDetailPage = () => {
   };
 
   const handleAccept = async () => {
-    if (!confirm('Accept this collaboration proposal?')) return;
-    try {
-      await acceptMutation.mutateAsync(collaboration.collaborationId);
-      showSuccess('Collaboration accepted successfully!');
-    } catch (error: unknown) {
-      showError(`Failed to accept: ${error.message || 'Unknown error'}`);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Accept Collaboration',
+      message: 'Are you sure you want to accept this collaboration proposal?',
+      variant: 'info',
+      onConfirm: async () => {
+        try {
+          await acceptMutation.mutateAsync(collaboration.collaborationId);
+          showSuccess('Collaboration accepted successfully!');
+        } catch (error: unknown) {
+          showError(`Failed to accept: ${error.message || 'Unknown error'}`);
+        }
+      },
+    });
   };
 
   const handleDecline = async () => {
-    if (!confirm('Decline this collaboration proposal?')) return;
-    try {
-      await declineMutation.mutateAsync(collaboration.collaborationId);
-      showSuccess('Collaboration declined.');
-      navigate(-1);
-    } catch (error: unknown) {
-      showError(`Failed to decline: ${error.message || 'Unknown error'}`);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Decline Collaboration',
+      message: 'Are you sure you want to decline this collaboration proposal?',
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          await declineMutation.mutateAsync(collaboration.collaborationId);
+          showSuccess('Collaboration declined.');
+          navigate(-1);
+        } catch (error: unknown) {
+          showError(`Failed to decline: ${error.message || 'Unknown error'}`);
+        }
+      },
+    });
   };
 
   const handleStart = async () => {
-    if (!confirm('Start work on this collaboration?')) return;
-    try {
-      await startMutation.mutateAsync(collaboration.collaborationId);
-      showSuccess('Collaboration started! Good luck with the project.');
-    } catch (error: unknown) {
-      showError(`Failed to start: ${error.message || 'Unknown error'}`);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Start Collaboration',
+      message: 'Are you ready to start work on this collaboration?',
+      variant: 'info',
+      onConfirm: async () => {
+        try {
+          await startMutation.mutateAsync(collaboration.collaborationId);
+          showSuccess('Collaboration started! Good luck with the project.');
+        } catch (error: unknown) {
+          showError(`Failed to start: ${error.message || 'Unknown error'}`);
+        }
+      },
+    });
   };
 
   const handleComplete = async () => {
-    if (!confirm('Mark this collaboration as completed?')) return;
-    try {
-      await completeMutation.mutateAsync(collaboration.collaborationId);
-      showSuccess('Collaboration marked as completed!');
-    } catch (error: unknown) {
-      showError(`Failed to complete: ${error.message || 'Unknown error'}`);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Complete Collaboration',
+      message: 'Are you sure you want to mark this collaboration as completed?',
+      variant: 'info',
+      onConfirm: async () => {
+        try {
+          await completeMutation.mutateAsync(collaboration.collaborationId);
+          showSuccess('Collaboration marked as completed!');
+        } catch (error: unknown) {
+          showError(`Failed to complete: ${error.message || 'Unknown error'}`);
+        }
+      },
+    });
   };
 
   const handleCancel = async () => {
-    if (!confirm('Cancel this collaboration? This action cannot be undone.')) return;
-    try {
-      await cancelMutation.mutateAsync(collaboration.collaborationId);
-      showSuccess('Collaboration canceled.');
-    } catch (error: unknown) {
-      showError(`Failed to cancel: ${error.message || 'Unknown error'}`);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Cancel Collaboration',
+      message: 'Are you sure you want to cancel this collaboration? This action cannot be undone.',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await cancelMutation.mutateAsync(collaboration.collaborationId);
+          showSuccess('Collaboration canceled.');
+        } catch (error: unknown) {
+          showError(`Failed to cancel: ${error.message || 'Unknown error'}`);
+        }
+      },
+    });
   };
 
   const canAccept = isTalent && collaboration.status === CollaborationStatus.PROPOSED;
@@ -371,6 +422,16 @@ export const CollaborationDetailPage = () => {
           </Card>
         )}
       </div>
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
     </MainLayout>
   );
 };

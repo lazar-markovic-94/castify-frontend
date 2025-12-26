@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from './Button';
 import { RatingStars } from './RatingStars';
+import { AlertModal } from './AlertModal';
 import { CreateRatingRequest } from '../../../core/domain/dtos';
 import { cn } from '../../lib/utils';
 
@@ -40,6 +41,8 @@ export const ReviewForm = ({
     timeliness: 0,
   });
 
+  const [showValidationAlert, setShowValidationAlert] = useState(false);
+
   const { register, handleSubmit } = useForm<FormData>();
 
   const handleRatingChange = (category: keyof typeof ratings, value: number) => {
@@ -55,7 +58,7 @@ export const ReviewForm = ({
       ratings.communication === 0 ||
       ratings.timeliness === 0
     ) {
-      alert('Please provide all ratings before submitting');
+      setShowValidationAlert(true);
       return;
     }
 
@@ -214,19 +217,17 @@ export const ReviewForm = ({
             id="wouldWorkAgain"
             className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
-          <label htmlFor="wouldWorkAgain" className="text-sm font-medium text-gray-900 cursor-pointer">
+          <label
+            htmlFor="wouldWorkAgain"
+            className="text-sm font-medium text-gray-900 cursor-pointer"
+          >
             I would work with this talent again
           </label>
         </div>
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button
@@ -236,11 +237,7 @@ export const ReviewForm = ({
           >
             {isSubmitting ? (
               <span className="flex items-center gap-2">
-                <svg
-                  className="animate-spin h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
                     cx="12"
@@ -263,6 +260,15 @@ export const ReviewForm = ({
           </Button>
         </div>
       </form>
+
+      {/* Validation Alert Modal */}
+      <AlertModal
+        isOpen={showValidationAlert}
+        title="Missing Ratings"
+        message="Please provide all ratings before submitting your review."
+        variant="warning"
+        onClose={() => setShowValidationAlert(false)}
+      />
     </div>
   );
 };

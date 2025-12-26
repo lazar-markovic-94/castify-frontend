@@ -28,6 +28,8 @@ import { Input } from '../../shared/components/ui/Input';
 import { MediaUpload, MediaUploadMetadata } from '../../shared/components/ui/MediaUpload';
 import { PortfolioGallery } from '../../shared/components/ui/PortfolioGallery';
 import { MediaViewer } from '../../shared/components/ui/MediaViewer';
+import { AlertModal } from '../../shared/components/ui/AlertModal';
+import { ConfirmModal } from '../../shared/components/ui/ConfirmModal';
 import { PortfolioItemWithMedia } from '../../core/domain/entities';
 import { useForm } from 'react-hook-form';
 import { LocationMode } from '../../core/domain/enums';
@@ -77,6 +79,33 @@ export const ProfilePage = () => {
   const [newGeoAreaCountry, setNewGeoAreaCountry] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Modal states
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant: 'error' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'info',
+  });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'info',
+  });
+
   // Portfolio state and hooks
   const { data: portfolioItems = [], isLoading: isLoadingPortfolio } = usePortfolioItems(
     profile?.talentProfileId
@@ -108,7 +137,12 @@ export const ProfilePage = () => {
 
   const captureCreateLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      setAlertModal({
+        isOpen: true,
+        title: 'Geolocation Not Supported',
+        message: 'Your browser does not support geolocation. Please enter your location manually.',
+        variant: 'error',
+      });
       return;
     }
 
@@ -139,14 +173,24 @@ export const ProfilePage = () => {
           setCreateValue('geoAreas', [{ city, country, isPrimary: true }]);
         } catch (error) {
           console.error('Error reverse geocoding:', error);
-          alert('Failed to get location details. Please enter city and country manually.');
+          setAlertModal({
+            isOpen: true,
+            title: 'Location Details Failed',
+            message: 'Failed to get location details. Please enter city and country manually.',
+            variant: 'warning',
+          });
         } finally {
           setIsCapturingCreateLocation(false);
         }
       },
       (error) => {
         console.error('Error getting location:', error);
-        alert('Failed to get your location. Please enter it manually.');
+        setAlertModal({
+          isOpen: true,
+          title: 'Location Access Failed',
+          message: 'Failed to get your location. Please enter it manually.',
+          variant: 'error',
+        });
         setIsCapturingCreateLocation(false);
       }
     );
@@ -158,13 +202,23 @@ export const ProfilePage = () => {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      setAlertModal({
+        isOpen: true,
+        title: 'Invalid File Type',
+        message: 'Please select an image file.',
+        variant: 'error',
+      });
       return;
     }
 
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image size must be less than 5MB');
+      setAlertModal({
+        isOpen: true,
+        title: 'File Too Large',
+        message: 'Image size must be less than 5MB.',
+        variant: 'error',
+      });
       return;
     }
 
@@ -273,17 +327,21 @@ export const ProfilePage = () => {
   };
 
   const handleRemoveGeoArea = (city: string, country: string) => {
-    if (!confirm(`Remove ${city}, ${country} from service areas?`)) {
-      return;
-    }
-
-    removeGeoArea.mutate(
-      { city, country },
-      {
-        onSuccess: () => showSuccess('Service area removed successfully!'),
-        onError: () => showError('Failed to remove service area'),
-      }
-    );
+    setConfirmModal({
+      isOpen: true,
+      title: 'Remove Service Area',
+      message: `Are you sure you want to remove ${city}, ${country} from your service areas?`,
+      variant: 'danger',
+      onConfirm: () => {
+        removeGeoArea.mutate(
+          { city, country },
+          {
+            onSuccess: () => showSuccess('Service area removed successfully!'),
+            onError: () => showError('Failed to remove service area'),
+          }
+        );
+      },
+    });
   };
 
   const onUpdateLanguages = (data: LanguagesFormData) => {
@@ -389,17 +447,21 @@ export const ProfilePage = () => {
   };
 
   const handleRemoveIntroVideo = async () => {
-    if (!confirm('Are you sure you want to remove your introduction video?')) {
-      return;
-    }
-
-    try {
-      await removeIntroductionVideo.mutateAsync();
-      showSuccess('Introduction video removed successfully!');
-    } catch (error: unknown) {
-      console.error('Error removing introduction video:', error);
-      showError(`Failed to remove video: ${error.message || 'Unknown error'}`);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Remove Introduction Video',
+      message: 'Are you sure you want to remove your introduction video?',
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          await removeIntroductionVideo.mutateAsync();
+          showSuccess('Introduction video removed successfully!');
+        } catch (error: unknown) {
+          console.error('Error removing introduction video:', error);
+          showError(`Failed to remove video: ${error.message || 'Unknown error'}`);
+        }
+      },
+    });
   };
 
   // Portfolio handlers
@@ -457,7 +519,12 @@ export const ProfilePage = () => {
 
   const captureCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      setAlertModal({
+        isOpen: true,
+        title: 'Geolocation Not Supported',
+        message: 'Your browser does not support geolocation. Please enter your location manually.',
+        variant: 'error',
+      });
       return;
     }
 
@@ -499,7 +566,12 @@ export const ProfilePage = () => {
       },
       (error) => {
         console.error('Error getting location:', error);
-        alert('Unable to retrieve your location. Please enter it manually.');
+        setAlertModal({
+          isOpen: true,
+          title: 'Location Access Failed',
+          message: 'Unable to retrieve your location. Please enter it manually.',
+          variant: 'error',
+        });
         setIsCapturingLocation(false);
       },
       {
@@ -1852,6 +1924,25 @@ export const ProfilePage = () => {
               ) > 0
             : false
         }
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        title={alertModal.title}
+        message={alertModal.message}
+        variant={alertModal.variant}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
       />
     </MainLayout>
   );
