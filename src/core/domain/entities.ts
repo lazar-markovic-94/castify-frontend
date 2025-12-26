@@ -7,6 +7,7 @@ import {
   ContentType,
   TalentTier,
   CollaborationStatus,
+  ServiceType,
 } from './enums';
 
 // Auth Entities
@@ -218,6 +219,8 @@ export interface Collaboration {
   talentProfileId: string;
   title: string;
   description: string;
+  servicesRequired: ServiceType[];
+  deadline: string | null;
   budget: number | null;
   startDate: string | null;
   endDate: string | null;

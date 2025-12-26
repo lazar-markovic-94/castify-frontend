@@ -1,4 +1,11 @@
-import { UserRole, VerificationStatus, OrgType, TalentTier, LocationMode } from './enums';
+import {
+  UserRole,
+  VerificationStatus,
+  OrgType,
+  TalentTier,
+  LocationMode,
+  ServiceType,
+} from './enums';
 import { PrimaryLocation, GeoArea } from './entities';
 
 // Auth DTOs
@@ -187,6 +194,8 @@ export interface CreateCollaborationRequest {
   talentProfileId: string;
   title: string;
   description: string;
+  servicesRequired: ServiceType[];
+  deadline?: string | null;
   budget?: number | null;
   startDate?: string | null;
   endDate?: string | null;

@@ -5,8 +5,16 @@ import { useTalentCollaborations } from '../../core/application/useCollaboration
 import { MainLayout } from '../../app/layouts/MainLayout';
 import { Card, CardContent } from '../../shared/components/ui/Card';
 import { Button } from '../../shared/components/ui/Button';
-import { CollaborationStatus } from '../../core/domain/enums';
+import { CollaborationStatus, ServiceType } from '../../core/domain/enums';
 import { Collaboration } from '../../core/domain/entities';
+
+const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
+  [ServiceType.VOICE_OVER]: 'Voice Over',
+  [ServiceType.ACTING_FROM_HOME]: 'Acting from Home',
+  [ServiceType.ACTING_ON_LOCATION]: 'Acting on Location',
+  [ServiceType.PHOTO_SHOOTING]: 'Photo Shooting',
+  [ServiceType.FULL_VIDEO_PRODUCTION]: 'Full Video Production',
+};
 
 export const MyOpportunitiesPage = () => {
   const [selectedStatus, setSelectedStatus] = useState<CollaborationStatus | undefined>(undefined);
@@ -89,7 +97,28 @@ export const MyOpportunitiesPage = () => {
 
           <p className="text-gray-600 mb-4 line-clamp-2">{collaboration.description}</p>
 
+          {/* Services Required */}
+          <div className="mb-4">
+            <p className="text-sm text-gray-500 mb-2">Services Required</p>
+            <div className="flex flex-wrap gap-2">
+              {collaboration.servicesRequired.map((service) => (
+                <span
+                  key={service}
+                  className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800"
+                >
+                  {SERVICE_TYPE_LABELS[service]}
+                </span>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+            {collaboration.deadline && (
+              <div>
+                <p className="text-sm text-gray-500">Deadline</p>
+                <p className="font-semibold text-red-600">{formatDate(collaboration.deadline)}</p>
+              </div>
+            )}
             <div>
               <p className="text-sm text-gray-500">Budget</p>
               <p className="font-semibold">{formatCurrency(collaboration.budget)}</p>

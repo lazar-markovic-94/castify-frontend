@@ -11,8 +11,16 @@ import { useCurrentUser } from '../../core/application/useAuth';
 import { MainLayout } from '../../app/layouts/MainLayout';
 import { Button } from '../../shared/components/ui/Button';
 import { Card, CardContent } from '../../shared/components/ui/Card';
-import { CollaborationStatus, UserRole } from '../../core/domain/enums';
+import { CollaborationStatus, UserRole, ServiceType } from '../../core/domain/enums';
 import { useToast } from '../../shared/contexts/ToastContext';
+
+const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
+  [ServiceType.VOICE_OVER]: 'Voice Over',
+  [ServiceType.ACTING_FROM_HOME]: 'Acting from Home',
+  [ServiceType.ACTING_ON_LOCATION]: 'Acting on Location',
+  [ServiceType.PHOTO_SHOOTING]: 'Photo Shooting',
+  [ServiceType.FULL_VIDEO_PRODUCTION]: 'Full Video Production',
+};
 
 export const CollaborationDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -241,6 +249,23 @@ export const CollaborationDetailPage = () => {
                 <p className="text-gray-900 whitespace-pre-wrap">{collaboration.description}</p>
               </div>
 
+              {/* Services Required */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
+                  Services Required
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {collaboration.servicesRequired.map((service) => (
+                    <span
+                      key={service}
+                      className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-100 text-indigo-800"
+                    >
+                      {SERVICE_TYPE_LABELS[service]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
               {collaboration.notes && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">
@@ -251,6 +276,12 @@ export const CollaborationDetailPage = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Deadline</h3>
+                  <p className="text-xl font-bold text-red-600">
+                    {formatDate(collaboration.deadline)}
+                  </p>
+                </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Budget</h3>
                   <p className="text-xl font-bold text-gray-900">
