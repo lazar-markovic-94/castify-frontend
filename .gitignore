@@ -23,6 +23,7 @@ vite.config.ts.timestamp-*
 .tmp/
 
 ### Environment Variables ###
+# Exclude all .env files by default
 .env
 .env.local
 .env.development.local
@@ -30,6 +31,13 @@ vite.config.ts.timestamp-*
 .env.production.local
 .env*.local
 *.env
+
+# EXCEPT: These template/example files SHOULD be tracked
+!.env.example
+!.env.development
+!.env.production
+
+# NOTE: .env.development.local is the recommended way to override for local dev
 
 ### VS Code ###
 .vscode/

@@ -68,12 +68,12 @@ castify-frontend/
 
 ### Layer Responsibilities
 
-| Layer | Responsibility | Dependencies |
-|-------|---------------|--------------|
-| **app** | Application bootstrap, routing, global providers | features, core, shared |
-| **core** | Business logic, domain models, data access | shared |
-| **features** | Feature-specific pages and components | core, shared |
-| **shared** | Reusable components, hooks, utilities | None (pure UI/utils) |
+| Layer        | Responsibility                                   | Dependencies           |
+| ------------ | ------------------------------------------------ | ---------------------- |
+| **app**      | Application bootstrap, routing, global providers | features, core, shared |
+| **core**     | Business logic, domain models, data access       | shared                 |
+| **features** | Feature-specific pages and components            | core, shared           |
+| **shared**   | Reusable components, hooks, utilities            | None (pure UI/utils)   |
 
 ### Data Flow
 
@@ -197,6 +197,7 @@ castify-frontend/
 ### Implemented Features ✅
 
 #### Authentication & Authorization
+
 - ✅ User registration with role selection (TALENT/CLIENT)
 - ✅ JWT-based login with auto-refresh
 - ✅ Protected routes with `AuthGuard`
@@ -205,6 +206,7 @@ castify-frontend/
 - ✅ Automatic logout on token expiration
 
 #### Landing Page
+
 - ✅ Hero section with call-to-action
 - ✅ Feature highlights
 - ✅ How it works section
@@ -213,6 +215,7 @@ castify-frontend/
 - ✅ Responsive design
 
 #### Talent Discovery (Public)
+
 - ✅ Browse talents with pagination
 - ✅ Advanced search filters:
   - Text search (name, bio)
@@ -225,6 +228,7 @@ castify-frontend/
 - ✅ Responsive grid layout
 
 #### Talent Profile View (Public)
+
 - ✅ Full profile details
 - ✅ Portfolio gallery with media viewer
 - ✅ Social media links
@@ -235,6 +239,7 @@ castify-frontend/
 - ✅ Contact button (for clients)
 
 #### Talent Profile Management (TALENT role)
+
 - ✅ Multi-step profile creation wizard
 - ✅ Bio and basic information
 - ✅ Location selection with map picker
@@ -248,12 +253,14 @@ castify-frontend/
 - ✅ Form state management with React Hook Form
 
 #### Client Organization (CLIENT role)
+
 - ✅ Organization setup form
 - ✅ Organization type (Agency, Brand, Individual)
 - ✅ Company details with website
 - ✅ Profile completion tracking
 
 #### Messaging System
+
 - ✅ Conversation list with unread indicators
 - ✅ Real-time message thread view
 - ✅ Send messages with validation
@@ -262,6 +269,7 @@ castify-frontend/
 - ✅ Message timestamps
 
 #### Collaboration Tracking ⭐ NEW
+
 - ✅ **My Projects** (CLIENT): Track hired talents and projects
 - ✅ **My Opportunities** (TALENT): View collaboration invitations
 - ✅ **Collaboration Details**: View project details, status, deliverables
@@ -269,6 +277,7 @@ castify-frontend/
 - ✅ Timeline visualization
 
 #### Rating & Review System ⭐ NEW
+
 - ✅ Rate talents (1-5 stars)
 - ✅ Write reviews
 - ✅ View all ratings for a talent
@@ -326,6 +335,7 @@ The app will be available at `http://localhost:5173`.
 #### 4. Verify the Application
 
 Open your browser:
+
 - Landing page: `http://localhost:5173`
 - Login: `http://localhost:5173/login`
 
@@ -353,11 +363,13 @@ docker-compose logs -f frontend
 The Dockerfile uses a **multi-stage build** for optimization:
 
 **Stage 1: Builder** (node:18-alpine)
+
 - Installs dependencies
 - Builds production bundle with Vite
 - Optimizes assets (minification, tree-shaking)
 
 **Stage 2: Runtime** (nginx:1.25-alpine)
+
 - Only serves static files
 - Custom nginx config for SPA routing
 - Gzip compression enabled
@@ -381,26 +393,69 @@ docker run -d \
 
 ## Environment Configuration
 
-### Environment Variables
+🔧 **For detailed environment setup, see [ENV_SETUP.md](./ENV_SETUP.md)**
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `VITE_API_BASE_URL` | Backend API base URL | Yes | `http://localhost:8080` |
-| `VITE_DEBUG` | Enable debug logging | No | `false` |
-| `VITE_APP_NAME` | Application name | No | `Castify` |
+### Quick Start
 
-### Development Environment
+**Local Development (Default):**
 
-```env
-VITE_API_BASE_URL=http://localhost:8080
-VITE_DEBUG=true
+```bash
+# .env.development.local is already configured - just start!
+npm run dev
 ```
 
-### Production Environment
+Frontend connects to: `http://localhost:8080` (your local backend)
 
-```env
-VITE_API_BASE_URL=https://api.castify.com
-VITE_DEBUG=false
+**Dev Server Testing:**
+
+```bash
+# Temporarily rename .env.development.local to test against remote backend
+mv .env.development.local .env.development.local.backup
+npm run dev
+# When done: mv .env.development.local.backup .env.development.local
+```
+
+Frontend connects to: `https://castify-alpha.duckdns.org` (remote backend)
+
+**Production Build:**
+
+```bash
+npm run build:prod
+```
+
+Frontend connects to: `https://castify-alpha.duckdns.org`
+
+### Environment Files
+
+| File                     | Purpose                                   | Git Tracked | Backend URL                 |
+| ------------------------ | ----------------------------------------- | ----------- | --------------------------- |
+| `.env.development.local` | **Local dev override** (highest priority) | ❌ No       | `localhost:8080`            |
+| `.env.development`       | Dev mode default                          | ✅ Yes      | `castify-alpha.duckdns.org` |
+| `.env.production`        | Production builds                         | ✅ Yes      | `castify-alpha.duckdns.org` |
+| `.env.example`           | Template/documentation                    | ✅ Yes      | -                           |
+
+**How it works:**
+
+- `.env.development.local` overrides `.env.development` when running `npm run dev`
+- Delete or rename `.env.development.local` to use the remote backend
+- `.env.local` is no longer needed (`.env.development.local` is more specific)
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev              # Local dev with .env.local (localhost backend)
+npm run dev:local        # Force development mode (.env.development)
+
+# Building
+npm run build            # Production build (.env.production)
+npm run build:dev        # Dev build (.env.development)
+npm run build:prod       # Production build (explicit)
+
+# Preview builds
+npm run preview          # Preview production build
+npm run preview:dev      # Preview dev build
+npm run preview:prod     # Preview prod build
 ```
 
 **Important**: Vite embeds environment variables at **build time**, not runtime. Rebuild the app after changing `.env` values.
@@ -429,6 +484,7 @@ npm run type-check  # (if configured)
 ### Development Server
 
 Vite dev server features:
+
 - ⚡ Lightning-fast HMR (Hot Module Replacement)
 - 🔄 Auto-reload on file changes
 - 🔍 Source maps for debugging
@@ -450,6 +506,7 @@ Default port: `5173` (configurable in `vite.config.ts`)
 Example: Adding a "Favorites" feature
 
 1. **Create Domain Model** (`src/core/domain/models/Favorite.ts`):
+
    ```typescript
    export interface Favorite {
      favoriteId: string;
@@ -460,25 +517,28 @@ Example: Adding a "Favorites" feature
    ```
 
 2. **Create Repository** (`src/core/data/repositories/FavoriteRepository.ts`):
+
    ```typescript
    export const FavoriteRepository = {
      getMyFavorites: () => api.get<Favorite[]>('/api/favorites'),
      addFavorite: (talentId: string) => api.post('/api/favorites', { talentId }),
-     removeFavorite: (favoriteId: string) => api.delete(`/api/favorites/${favoriteId}`)
+     removeFavorite: (favoriteId: string) => api.delete(`/api/favorites/${favoriteId}`),
    };
    ```
 
 3. **Create Custom Hook** (`src/shared/hooks/useFavorites.ts`):
+
    ```typescript
    export const useFavorites = () => {
      return useQuery({
        queryKey: ['favorites'],
-       queryFn: () => FavoriteRepository.getMyFavorites()
+       queryFn: () => FavoriteRepository.getMyFavorites(),
      });
    };
    ```
 
 4. **Create Feature Page** (`src/features/favorites/FavoritesPage.tsx`):
+
    ```typescript
    export const FavoritesPage = () => {
      const { data: favorites, isLoading } = useFavorites();
@@ -497,6 +557,7 @@ npm run build
 ```
 
 This creates an optimized production bundle in the `dist/` directory with:
+
 - ✅ Minified JavaScript/CSS
 - ✅ Tree-shaking (dead code elimination)
 - ✅ Code splitting
@@ -526,10 +587,12 @@ Serves the production build locally on `http://localhost:4173` for testing.
 ### Build Performance
 
 Typical build times:
+
 - Development: ~1-2s (HMR)
 - Production: ~15-30s (full optimization)
 
 Bundle size (gzipped):
+
 - Main bundle: ~150KB
 - Vendor bundle: ~200KB
 - Total: ~350KB
@@ -588,6 +651,7 @@ aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
 ### Nginx Configuration
 
 The included `nginx.conf` provides:
+
 - ✅ SPA routing (all routes fallback to `index.html`)
 - ✅ Gzip compression
 - ✅ Security headers (X-Frame-Options, X-Content-Type-Options)
@@ -603,10 +667,12 @@ For custom deployments, use this config as a template.
 The app uses a centralized Axios instance (`src/shared/utils/api.ts`) with:
 
 #### Request Interceptor
+
 - Auto-injects JWT token in `Authorization` header
 - Adds `Content-Type: application/json`
 
 #### Response Interceptor
+
 - Handles 401 (Unauthorized) → Auto logout
 - Handles 403 (Forbidden) → Redirect to home
 - Extracts error messages for display
@@ -614,6 +680,7 @@ The app uses a centralized Axios instance (`src/shared/utils/api.ts`) with:
 ### TanStack Query Setup
 
 Query client configuration:
+
 - **Stale Time**: 5 minutes (data considered fresh)
 - **Cache Time**: 10 minutes (cache retention)
 - **Retry**: 3 attempts with exponential backoff
@@ -621,19 +688,19 @@ Query client configuration:
 
 ### API Endpoints Used
 
-| Endpoint | Method | Purpose | Auth Required |
-|----------|--------|---------|---------------|
-| `/api/auth/register` | POST | Register new user | No |
-| `/api/auth/login` | POST | Login and get JWT | No |
-| `/api/me` | GET | Get current user | Yes |
-| `/api/talents` | GET | Search talents | No |
-| `/api/talents/{id}` | GET | Get talent details | No |
-| `/api/talents/me/profile` | POST/PUT | Update profile | Yes (TALENT) |
-| `/api/client/org` | POST/PUT | Update organization | Yes (CLIENT) |
-| `/api/conversations` | GET/POST | List/create conversations | Yes |
-| `/api/conversations/{id}/messages` | GET/POST | Get/send messages | Yes |
-| `/api/ratings/{talentId}` | POST/GET | Rate/get ratings | Varies |
-| `/api/ratings/leaderboard` | GET | Get top talents | No |
+| Endpoint                           | Method   | Purpose                   | Auth Required |
+| ---------------------------------- | -------- | ------------------------- | ------------- |
+| `/api/auth/register`               | POST     | Register new user         | No            |
+| `/api/auth/login`                  | POST     | Login and get JWT         | No            |
+| `/api/me`                          | GET      | Get current user          | Yes           |
+| `/api/talents`                     | GET      | Search talents            | No            |
+| `/api/talents/{id}`                | GET      | Get talent details        | No            |
+| `/api/talents/me/profile`          | POST/PUT | Update profile            | Yes (TALENT)  |
+| `/api/client/org`                  | POST/PUT | Update organization       | Yes (CLIENT)  |
+| `/api/conversations`               | GET/POST | List/create conversations | Yes           |
+| `/api/conversations/{id}/messages` | GET/POST | Get/send messages         | Yes           |
+| `/api/ratings/{talentId}`          | POST/GET | Rate/get ratings          | Varies        |
+| `/api/ratings/leaderboard`         | GET      | Get top talents           | No            |
 
 See backend README for complete API documentation.
 
@@ -642,6 +709,7 @@ See backend README for complete API documentation.
 ### Tailwind CSS
 
 The project uses **Tailwind CSS** for styling with:
+
 - **Utility-first approach**: Compose styles with classes
 - **Responsive design**: Mobile-first breakpoints
 - **Custom theme**: Configured in `tailwind.config.js`
@@ -660,14 +728,15 @@ xl: '1280px'  // Extra large devices
 #### Custom Colors (if configured)
 
 ```javascript
-primary: '#...'
-secondary: '#...'
-accent: '#...'
+primary: '#...';
+secondary: '#...';
+accent: '#...';
 ```
 
 ### Component Library
 
 The app uses custom UI components in `src/shared/components/ui/`:
+
 - `Button`: Primary, secondary, outline variants
 - `Input`: Text, email, password inputs with validation
 - `Card`: Content containers
@@ -734,6 +803,7 @@ npm run test:coverage # Generate coverage report
 **Problem**: Port 5173 already in use
 
 **Solution**:
+
 ```bash
 # Check what's using the port
 lsof -i :5173
@@ -747,6 +817,7 @@ npm run dev -- --port 3000
 **Problem**: TypeScript compilation errors
 
 **Solution**:
+
 ```bash
 # Type check without building
 npx tsc --noEmit
@@ -758,6 +829,7 @@ npm run build
 **Problem**: Out of memory during build
 
 **Solution**:
+
 ```bash
 # Increase Node memory limit
 NODE_OPTIONS=--max-old-space-size=4096 npm run build
@@ -768,6 +840,7 @@ NODE_OPTIONS=--max-old-space-size=4096 npm run build
 **Problem**: CORS errors
 
 **Solution**: Ensure backend has correct `ALLOWED_ORIGINS` configured:
+
 ```bash
 # Backend .env
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
@@ -776,6 +849,7 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 **Problem**: 401 Unauthorized errors
 
 **Solution**:
+
 1. Check if token is stored: `localStorage.getItem('token')`
 2. Verify token is valid (not expired)
 3. Check if backend is running
@@ -786,6 +860,7 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 **Problem**: Frontend container can't connect to backend
 
 **Solution**: Use correct network configuration in `docker-compose.yml`:
+
 ```yaml
 # Frontend should use backend service name
 VITE_API_BASE_URL=http://backend:8080  # For container-to-container
@@ -796,6 +871,7 @@ VITE_API_BASE_URL=http://localhost:8080  # For browser-to-host
 **Problem**: Changes not reflected in Docker container
 
 **Solution**:
+
 ```bash
 # Rebuild without cache
 docker-compose build --no-cache frontend
@@ -807,6 +883,7 @@ docker-compose up -d frontend
 **Problem**: Refreshing the page gives 404 in production
 
 **Solution**: Ensure nginx is configured to fallback to `index.html`:
+
 ```nginx
 location / {
     try_files $uri $uri/ /index.html;
@@ -820,6 +897,7 @@ This is already configured in the included `nginx.conf`.
 **Problem**: Slow initial load
 
 **Solution**:
+
 1. Enable code splitting in `vite.config.ts`
 2. Lazy load routes with `React.lazy()`
 3. Optimize images (use WebP, compress)
@@ -828,6 +906,7 @@ This is already configured in the included `nginx.conf`.
 **Problem**: Slow re-renders
 
 **Solution**:
+
 1. Use `React.memo()` for expensive components
 2. Optimize TanStack Query with proper cache times
 3. Use `useMemo` and `useCallback` for expensive computations

@@ -2,8 +2,9 @@
 # https://docs.netlify.com/configure-builds/file-based-configuration/
 
 [build]
-  # Build command (skip TypeScript checking for alpha/dev)
-  command = "vite build"
+  # Build command - explicitly use production mode
+  # This ensures .env.production is used (points to castify-alpha.duckdns.org)
+  command = "npm run build:prod"
 
   # Directory to publish (Vite outputs to 'dist' by default)
   publish = "dist"
@@ -13,21 +14,21 @@
 
 # Production context: all deploys from the main branch will inherit these settings
 [context.production]
-  command = "vite build"
+  command = "npm run build:prod"
 
   [context.production.environment]
     NODE_VERSION = "20"
 
 # Deploy Preview context: all Deploy Previews will inherit these settings
 [context.deploy-preview]
-  command = "vite build"
+  command = "npm run build:prod"
 
   [context.deploy-preview.environment]
     NODE_VERSION = "20"
 
 # Branch deploy context: all deploys that are not from a pull/merge request will inherit these settings
 [context.branch-deploy]
-  command = "vite build"
+  command = "npm run build:prod"
 
   [context.branch-deploy.environment]
     NODE_VERSION = "20"
