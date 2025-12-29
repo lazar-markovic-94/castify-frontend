@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
 import { Card, CardContent } from './Card';
@@ -7,6 +8,7 @@ import { Input } from './Input';
 import { CreateCollaborationRequest } from '../../../core/domain/dtos';
 import { ServiceType } from '../../../core/domain/enums';
 import { modalBackdrop, modalContent, modalConfig } from '../../lib/animations';
+import { createCollaborationSchema } from '../../lib/formSchemas';
 
 interface CollaborationRequestModalProps {
   talentProfileId: string;
@@ -47,7 +49,9 @@ export const CollaborationRequestModal = ({
     handleSubmit,
     formState: { errors },
     setValue,
-  } = useForm<FormData>();
+  } = useForm<FormData>({
+    resolver: zodResolver(createCollaborationSchema),
+  });
   const [selectedServices, setSelectedServices] = useState<ServiceType[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 

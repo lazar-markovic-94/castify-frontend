@@ -32,12 +32,22 @@ import { AlertModal } from '../../shared/components/ui/AlertModal';
 import { ConfirmModal } from '../../shared/components/ui/ConfirmModal';
 import { PortfolioItemWithMedia } from '../../core/domain/entities';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { LocationMode } from '../../core/domain/enums';
 import {
   CreateTalentProfileRequest,
   UpdatePrimaryLocationRequest,
   UpdateCapabilitiesRequest,
 } from '../../core/domain/dtos';
+import {
+  createTalentProfileSchema,
+  updatePrimaryLocationSchema,
+} from '../../shared/lib/formSchemas';
+import {
+  isDuplicateLocation,
+  parseLanguages,
+  VALIDATION_LIMITS,
+} from '../../shared/lib/validationUtils';
 
 // Form types that match the HTML form structure
 interface LanguagesFormData {
@@ -125,7 +135,9 @@ export const ProfilePage = () => {
     register: registerCreate,
     handleSubmit: handleSubmitCreate,
     setValue: setCreateValue,
+    formState: { errors: createErrors },
   } = useForm<CreateTalentProfileRequest>({
+    resolver: zodResolver(createTalentProfileSchema),
     defaultValues: {
       locationMode: LocationMode.SPECIFIC,
       primaryLocation: undefined,
@@ -253,7 +265,9 @@ export const ProfilePage = () => {
     handleSubmit: handleSubmitLocation,
     reset: resetLocation,
     setValue: setLocationValue,
-  } = useForm<LocationFormData>();
+  } = useForm<LocationFormData>({
+    resolver: zodResolver(updatePrimaryLocationSchema),
+  });
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
   const {
     register: registerLanguages,
@@ -302,15 +316,24 @@ export const ProfilePage = () => {
   };
 
   const handleAddGeoArea = () => {
-    if (!newGeoAreaCity.trim() || !newGeoAreaCountry.trim()) {
+    const trimmedCity = newGeoAreaCity.trim();
+    const trimmedCountry = newGeoAreaCountry.trim();
+
+    if (!trimmedCity || !trimmedCountry) {
       showError('Please enter both city and country');
+      return;
+    }
+
+    // Check for duplicates
+    if (profile?.geoAreas && isDuplicateLocation(trimmedCity, trimmedCountry, profile.geoAreas)) {
+      showError('This service area already exists in your list');
       return;
     }
 
     addGeoArea.mutate(
       {
-        city: newGeoAreaCity.trim(),
-        country: newGeoAreaCountry.trim(),
+        city: trimmedCity,
+        country: trimmedCountry,
         isPrimary: false,
       },
       {
@@ -345,10 +368,13 @@ export const ProfilePage = () => {
   };
 
   const onUpdateLanguages = (data: LanguagesFormData) => {
-    const languages = data.languages
-      .split(',')
-      .map((l: string) => l.trim())
-      .filter(Boolean);
+    const languages = parseLanguages(data.languages);
+
+    if (languages.length === 0) {
+      showError('Please enter at least one valid language (letters only, min 2 characters)');
+      return;
+    }
+
     updateLanguages.mutate(
       { languages },
       {
@@ -396,6 +422,13 @@ export const ProfilePage = () => {
       return;
     }
 
+    // Validate file size
+    const maxSizeMB = VALIDATION_LIMITS.VIDEO_MAX_MB;
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      showError(`Video file must be smaller than ${maxSizeMB}MB`);
+      return;
+    }
+
     // Create video element to check duration
     const video = document.createElement('video');
     video.preload = 'metadata';
@@ -404,8 +437,10 @@ export const ProfilePage = () => {
       window.URL.revokeObjectURL(video.src);
       const duration = Math.round(video.duration);
 
-      if (duration > 30) {
-        showError('Introduction video must be 30 seconds or less');
+      if (duration > VALIDATION_LIMITS.INTRO_VIDEO_MAX_SECONDS) {
+        showError(
+          `Introduction video must be ${VALIDATION_LIMITS.INTRO_VIDEO_MAX_SECONDS} seconds or less`
+        );
         return;
       }
 
@@ -630,21 +665,55 @@ export const ProfilePage = () => {
                 className="space-y-5"
               >
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Full Name</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
                   <Input
                     {...registerCreate('fullName')}
                     placeholder="John Doe"
-                    className="mt-1 h-11"
+                    className={`mt-1 h-11 ${createErrors.fullName ? 'border-red-500' : ''}`}
                   />
+                  {createErrors.fullName && (
+                    <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      {createErrors.fullName.message}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Bio</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Bio <span className="text-red-500">*</span>
+                  </label>
                   <textarea
                     {...registerCreate('bio')}
-                    className="mt-1 flex w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                    className={`mt-1 flex w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] ${
+                      createErrors.bio ? 'border-red-500' : 'border-slate-300'
+                    }`}
                     placeholder="Tell clients about your experience, skills, and what makes you unique..."
+                    maxLength={VALIDATION_LIMITS.BIO_MAX}
                   />
+                  {createErrors.bio && (
+                    <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      {createErrors.bio.message}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-500 mt-1">
+                    {VALIDATION_LIMITS.BIO_MIN}-{VALIDATION_LIMITS.BIO_MAX} characters
+                  </p>
                 </div>
 
                 <div>
@@ -714,22 +783,49 @@ export const ProfilePage = () => {
                   <input type="hidden" {...registerCreate('primaryLocation.latitude')} />
                   <input type="hidden" {...registerCreate('primaryLocation.longitude')} />
                   <div>
-                    <label className="text-sm font-semibold text-slate-700">Primary City</label>
+                    <label className="text-sm font-semibold text-slate-700">
+                      Primary City <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       {...registerCreate('primaryLocation.city')}
                       placeholder="Belgrade"
-                      className="mt-1 h-11"
+                      className={`mt-1 h-11 ${createErrors.primaryLocation?.city ? 'border-red-500' : ''}`}
                     />
+                    {createErrors.primaryLocation?.city && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {createErrors.primaryLocation.city.message}
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-slate-700">Country</label>
+                    <label className="text-sm font-semibold text-slate-700">
+                      Country <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       {...registerCreate('primaryLocation.country')}
                       placeholder="Serbia"
-                      className="mt-1 h-11"
+                      className={`mt-1 h-11 ${createErrors.primaryLocation?.country ? 'border-red-500' : ''}`}
                     />
+                    {createErrors.primaryLocation?.country && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {createErrors.primaryLocation.country.message}
+                      </p>
+                    )}
                   </div>
                 </div>
+                {(createErrors.primaryLocation?.latitude ||
+                  createErrors.primaryLocation?.longitude) && (
+                  <p className="text-sm text-red-600 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Please use the "Use Current Location" button to set your coordinates
+                  </p>
+                )}
                 <p className="text-xs text-slate-500">
                   Your primary city is where you're based. You'll be able to add additional service
                   areas after creating your profile.

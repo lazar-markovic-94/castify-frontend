@@ -3,6 +3,7 @@ import { cn } from '../../lib/utils';
 import { Button } from './Button';
 import { AlertModal } from './AlertModal';
 import { MediaType, ContentType } from '../../../core/domain/enums';
+import { VALIDATION_LIMITS } from '../../lib/validationUtils';
 
 interface MediaUploadProps {
   onFileSelect: (file: File, metadata: MediaUploadMetadata) => void;
@@ -124,6 +125,26 @@ export const MediaUpload = ({
 
   const handleUpload = () => {
     if (!selectedFile) return;
+
+    // Validate title length
+    if (title.trim() && title.trim().length > VALIDATION_LIMITS.TITLE_MAX) {
+      setAlertModal({
+        isOpen: true,
+        title: 'Title Too Long',
+        message: `Title must be ${VALIDATION_LIMITS.TITLE_MAX} characters or less`,
+      });
+      return;
+    }
+
+    // Validate description length
+    if (description.trim() && description.trim().length > VALIDATION_LIMITS.DESCRIPTION_MAX) {
+      setAlertModal({
+        isOpen: true,
+        title: 'Description Too Long',
+        message: `Description must be ${VALIDATION_LIMITS.DESCRIPTION_MAX} characters or less`,
+      });
+      return;
+    }
 
     onFileSelect(selectedFile, {
       mediaType,
@@ -255,8 +276,12 @@ export const MediaUpload = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter a title for this media"
+                maxLength={VALIDATION_LIMITS.TITLE_MAX}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {title.length}/{VALIDATION_LIMITS.TITLE_MAX} characters
+              </p>
             </div>
 
             <div>
@@ -268,8 +293,12 @@ export const MediaUpload = ({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add a description"
                 rows={3}
+                maxLength={VALIDATION_LIMITS.DESCRIPTION_MAX}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {description.length}/{VALIDATION_LIMITS.DESCRIPTION_MAX} characters
+              </p>
             </div>
           </div>
 

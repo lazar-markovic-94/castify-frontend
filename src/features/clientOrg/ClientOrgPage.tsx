@@ -9,8 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../shared/component
 import { Button } from '../../shared/components/ui/Button';
 import { Input } from '../../shared/components/ui/Input';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateClientOrgRequest, UpdateClientOrgRequest } from '../../core/domain/dtos';
 import { OrgType } from '../../core/domain/enums';
+import { createClientOrgSchema, updateClientOrgSchema } from '../../shared/lib/formSchemas';
+import { VALIDATION_LIMITS } from '../../shared/lib/validationUtils';
 
 export const ClientOrgPage = () => {
   const { data: org, isLoading, error } = useMyClientOrg();
@@ -18,18 +21,24 @@ export const ClientOrgPage = () => {
   const updateOrg = useUpdateClientOrg();
   const [isEditing, setIsEditing] = useState(false);
 
-  const { register: registerCreate, handleSubmit: handleSubmitCreate } =
-    useForm<CreateClientOrgRequest>({
-      defaultValues: {
-        orgType: OrgType.PRODUCTION_COMPANY,
-      },
-    });
+  const {
+    register: registerCreate,
+    handleSubmit: handleSubmitCreate,
+    formState: { errors: createErrors },
+  } = useForm<CreateClientOrgRequest>({
+    resolver: zodResolver(createClientOrgSchema),
+    defaultValues: {
+      orgType: OrgType.PRODUCTION_COMPANY,
+    },
+  });
 
   const {
     register: registerUpdate,
     handleSubmit: handleSubmitUpdate,
     reset: resetUpdate,
-  } = useForm<UpdateClientOrgRequest>();
+  } = useForm<UpdateClientOrgRequest>({
+    resolver: zodResolver(updateClientOrgSchema),
+  });
 
   const onCreateOrg = (data: CreateClientOrgRequest) => {
     createOrg.mutate(data);
@@ -83,12 +92,17 @@ export const ClientOrgPage = () => {
             <CardContent>
               <form onSubmit={handleSubmitCreate(onCreateOrg)} className="space-y-5">
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Organization Name</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Organization Name <span className="text-red-500">*</span>
+                  </label>
                   <Input
                     {...registerCreate('orgName')}
                     placeholder="ABC Productions"
-                    className="mt-1 h-11"
+                    className={`mt-1 h-11 ${createErrors.orgName ? 'border-red-500' : ''}`}
                   />
+                  {createErrors.orgName && (
+                    <p className="text-sm text-red-600 mt-1">{createErrors.orgName.message}</p>
+                  )}
                 </div>
 
                 <div>
@@ -105,59 +119,96 @@ export const ClientOrgPage = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Description</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Description <span className="text-slate-500">(optional)</span>
+                  </label>
                   <textarea
                     {...registerCreate('description')}
-                    className="mt-1 flex w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                    className={`mt-1 flex w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] ${
+                      createErrors.description ? 'border-red-500' : 'border-slate-300'
+                    }`}
                     placeholder="Tell us about your organization..."
+                    maxLength={VALIDATION_LIMITS.DESCRIPTION_MAX}
                   />
+                  {createErrors.description && (
+                    <p className="text-sm text-red-600 mt-1">{createErrors.description.message}</p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Website</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Website <span className="text-slate-500">(optional)</span>
+                  </label>
                   <Input
                     {...registerCreate('website')}
                     placeholder="https://..."
-                    className="mt-1 h-11"
+                    className={`mt-1 h-11 ${createErrors.website ? 'border-red-500' : ''}`}
                   />
+                  {createErrors.website && (
+                    <p className="text-sm text-red-600 mt-1">{createErrors.website.message}</p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Address</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Address <span className="text-slate-500">(optional)</span>
+                  </label>
                   <Input
                     {...registerCreate('address')}
                     placeholder="123 Main St, Los Angeles, CA"
-                    className="mt-1 h-11"
+                    className={`mt-1 h-11 ${createErrors.address ? 'border-red-500' : ''}`}
                   />
+                  {createErrors.address && (
+                    <p className="text-sm text-red-600 mt-1">{createErrors.address.message}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-semibold text-slate-700">Contact Email</label>
+                    <label className="text-sm font-semibold text-slate-700">
+                      Contact Email <span className="text-slate-500">(optional)</span>
+                    </label>
                     <Input
                       {...registerCreate('contactEmail')}
                       type="email"
                       placeholder="contact@example.com"
-                      className="mt-1 h-11"
+                      className={`mt-1 h-11 ${createErrors.contactEmail ? 'border-red-500' : ''}`}
                     />
+                    {createErrors.contactEmail && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {createErrors.contactEmail.message}
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-slate-700">Contact Phone</label>
+                    <label className="text-sm font-semibold text-slate-700">
+                      Contact Phone <span className="text-slate-500">(optional)</span>
+                    </label>
                     <Input
                       {...registerCreate('contactPhone')}
                       placeholder="+1 (555) 123-4567"
-                      className="mt-1 h-11"
+                      className={`mt-1 h-11 ${createErrors.contactPhone ? 'border-red-500' : ''}`}
                     />
+                    {createErrors.contactPhone && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {createErrors.contactPhone.message}
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-slate-700">Logo URL</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Logo URL <span className="text-slate-500">(optional)</span>
+                  </label>
                   <Input
                     {...registerCreate('logoUrl')}
                     placeholder="https://..."
-                    className="mt-1 h-11"
+                    className={`mt-1 h-11 ${createErrors.logoUrl ? 'border-red-500' : ''}`}
                   />
+                  {createErrors.logoUrl && (
+                    <p className="text-sm text-red-600 mt-1">{createErrors.logoUrl.message}</p>
+                  )}
                 </div>
 
                 <Button

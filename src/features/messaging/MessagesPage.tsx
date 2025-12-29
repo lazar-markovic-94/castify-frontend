@@ -18,6 +18,7 @@ import { useClientOrgByUserId } from '../../core/application/useClientOrg';
 import { MessageSkeleton, ConversationSkeleton } from '../../shared/components/ui/SkeletonLoader';
 import { messageEnter } from '../../shared/lib/animations';
 import { useToast } from '../../shared/contexts/ToastContext';
+import { VALIDATION_LIMITS } from '../../shared/lib/validationUtils';
 
 // Component to fetch and display participant name
 import { Conversation, User } from '../../core/domain/entities';
@@ -134,6 +135,14 @@ export const MessagesPage = () => {
     if (!messageText.trim() || !selectedConversationId) return;
 
     const messageContent = messageText.trim();
+
+    // Validate message length
+    if (messageContent.length > VALIDATION_LIMITS.MESSAGE_MAX) {
+      showError(
+        `Message is too long. Maximum ${VALIDATION_LIMITS.MESSAGE_MAX} characters allowed.`
+      );
+      return;
+    }
 
     sendMessage.mutate(
       { content: messageContent },
@@ -380,54 +389,57 @@ export const MessagesPage = () => {
                 </CardContent>
 
                 <div className="p-4 border-t border-slate-200">
-                  <form onSubmit={handleSendMessage} className="flex gap-3">
-                    <Input
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      placeholder="Type your message..."
-                      className="flex-1 h-12 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
-                      autoFocus
-                    />
-                    <Button
-                      type="submit"
-                      disabled={!messageText.trim() || sendMessage.isPending}
-                      className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg"
-                    >
-                      {sendMessage.isPending ? (
-                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                      ) : (
-                        <span className="flex items-center gap-2">
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
+                  <form onSubmit={handleSendMessage} className="space-y-2">
+                    <div className="flex gap-3">
+                      <Input
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        placeholder="Type your message..."
+                        className="flex-1 h-12 border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                        autoFocus
+                        maxLength={VALIDATION_LIMITS.MESSAGE_MAX}
+                      />
+                      <Button
+                        type="submit"
+                        disabled={!messageText.trim() || sendMessage.isPending}
+                        className="h-12 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg"
+                      >
+                        {sendMessage.isPending ? (
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
                             <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                            />
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
-                          Send
-                        </span>
-                      )}
-                    </Button>
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                              />
+                            </svg>
+                            Send
+                          </span>
+                        )}
+                      </Button>
+                    </div>
                   </form>
                 </div>
               </>
